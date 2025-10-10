@@ -561,7 +561,7 @@ exports.reportIncident = async (req, res) => {
     const { title, description, location } = req.body;
     try {
       // Validate required fields. Expect the image file from Multer in req.file.
-      if (!title || !description || !location || !req.file) {
+      if (!title || !description || !location) {
         return res.status(400).json({
           message: "Please fill all the fields.",
           success: false,
@@ -569,7 +569,7 @@ exports.reportIncident = async (req, res) => {
       }
   
       // Retrieve the image file's path from Multer
-      const imagePath = req.file.path;
+      const imagePath = req.file ? req.file.path : null;
   
       // Await severity prediction (remains unchanged)
       const severity = await this.predictSeverity(description);
@@ -588,6 +588,7 @@ exports.reportIncident = async (req, res) => {
   
       res.status(201).json({
         message: "Incident reported successfully!",
+        success: true,
         incident,
       });
     } catch (error) {
@@ -613,7 +614,7 @@ exports.getReport = async (req, res) => {
 
         return res.json({
             report: report,
-            success: true,
+            success: true, 
             message : "Success in fetching report!"
         })
     } catch (error) {

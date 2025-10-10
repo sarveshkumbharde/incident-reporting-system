@@ -1,4 +1,3 @@
-
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { axiosInstance } from "./axios";
@@ -114,7 +113,7 @@ export const useAuthStore = create(
       reportIncident: async (data) => {
         set({ isReportingIncident: true });
         try {
-          const res = await axiosInstance.post("/auth/report-incident", data);
+          const res = await axiosInstance.post("/auth/report-incident", data); 
           if (res.data.success) {
             toast.success("Incident reported successfully! We'll review it shortly.");
           } else {

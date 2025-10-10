@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 const mongoose = require('mongoose');
-require('dotenv').config({ path: './backend/.env' });
+require('dotenv').config();
 
 // Import models
-const User = require('./backend/models/user.model.js');
-const RegisteredUser = require('./backend/models/registeredUsers.model.js');
+const User = require('./models/user.model.js');
+const RegisteredUser = require('./models/registeredUsers.model.js');
 
 async function debugUsers() {
     try {

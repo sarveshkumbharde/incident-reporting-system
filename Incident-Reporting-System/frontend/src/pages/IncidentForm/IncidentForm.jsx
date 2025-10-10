@@ -19,7 +19,6 @@ const IncidentForm = () => {
     if (file) setPhotoFile(file);
   };
 
-
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [id]: value }));
@@ -27,6 +26,12 @@ const IncidentForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const incidentData = new FormData();
+    incidentData.append("title", formData.title);
+    incidentData.append("description", formData.description);
+    incidentData.append("location", formData.location);
+    incidentData.append("severity", formData.severity);
+    if (photoFile) incidentData.append("image", photoFile);
     await reportIncident(formData);
   };
 
@@ -42,7 +47,10 @@ const IncidentForm = () => {
 
         {/* Title */}
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2" htmlFor="title">
+          <label
+            className="block text-gray-700 font-medium mb-2"
+            htmlFor="title"
+          >
             Title
           </label>
           <input
@@ -57,7 +65,10 @@ const IncidentForm = () => {
 
         {/* Description */}
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2" htmlFor="description">
+          <label
+            className="block text-gray-700 font-medium mb-2"
+            htmlFor="description"
+          >
             Description
           </label>
           <textarea
@@ -72,7 +83,10 @@ const IncidentForm = () => {
 
         {/* Location */}
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2" htmlFor="location">
+          <label
+            className="block text-gray-700 font-medium mb-2"
+            htmlFor="location"
+          >
             Location
           </label>
           <input
@@ -87,7 +101,10 @@ const IncidentForm = () => {
 
         {/* Severity */}
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2" htmlFor="severity">
+          <label
+            className="block text-gray-700 font-medium mb-2"
+            htmlFor="severity"
+          >
             Severity
           </label>
           <select
@@ -105,13 +122,16 @@ const IncidentForm = () => {
 
         {/* Image Upload */}
         <div className="mb-6">
-          <label className="block text-gray-700 font-medium mb-2" htmlFor="images">
+          <label
+            className="block text-gray-700 font-medium mb-2"
+            htmlFor="images"
+          >
             Upload Image
           </label>
           <input
             type="file"
             id="images"
-            value={formData.photoFile}
+            // value={formData.photoFile}
             onChange={handlePhotoFile}
             className="w-full text-gray-700"
           />

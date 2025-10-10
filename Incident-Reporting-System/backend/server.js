@@ -13,12 +13,14 @@ const adminRoutes = require('./routes/admin.routes.js')
 
 // Middleware
 app.use(cors({
-    origin: 'https://prabhodanyaya.netlify.app',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    // origin: 'https://prabhodanyaya.netlify.app',
+    // methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    // allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: 'http://localhost:5173',
     credentials: true
   }));
   
+app.use("/uploads", express.static("uploads"));
 app.use(express.json());
 app.use(bodyParser.json({ limit: '20mb' })); // Adjust the size limit accordingly
 app.use(bodyParser.urlencoded({ limit: '20mb', extended: true }));

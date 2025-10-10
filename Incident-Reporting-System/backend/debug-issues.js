@@ -6,8 +6,8 @@ mongoose.connect(process.env.MONGO_URL)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-const User = require('./backend/models/user.model.js');
-const Incident = require('./backend/models/incident.model.js');
+const User = require('./models/user.model.js');
+const Incident = require('./models/incident.model.js');
 
 async function debugIssues() {
   try {
