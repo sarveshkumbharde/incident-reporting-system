@@ -1,6 +1,5 @@
 const incidentModel = require('../models/incident.model')
 const User = require('../models/user.model')
-const reportModel = require('../models/report.model');
 const mongoose = require('mongoose');
 
 exports.getIncidentById = async (req, res) => {
@@ -60,18 +59,18 @@ exports.markIncidentAsSolved = async (req, res) => {
         incident.status = 'resolved';
         await incident.save();
 
-        const report = new reportModel({
-            title: incident.title,
-            description: incident.description,
-            reportedBy: incident.reportedBy,
-            status: 'resolved',
-            severity: incident.severity,
-            location: incident.location,
-            incident: incident._id,
-            attachments: incident.image,
-        });
+        // const report = new reportModel({
+        //     title: incident.title,
+        //     description: incident.description,
+        //     reportedBy: incident.reportedBy,
+        //     status: 'resolved',
+        //     severity: incident.severity,
+        //     location: incident.location,
+        //     incident: incident._id,
+        //     attachments: incident.image,
+        // });
 
-        await report.save();
+        // await report.save();
 
         const reportedBy = await User.findById(incident.reportedBy);
 
@@ -88,7 +87,7 @@ exports.markIncidentAsSolved = async (req, res) => {
             message: "Incident marked as resolved, and report generated.",
             success: true,
             updatedIncident: incident,
-            generatedReport: report,
+            // generatedReport: report,
         });
         
     } catch (error) {
@@ -96,6 +95,7 @@ exports.markIncidentAsSolved = async (req, res) => {
         return res.status(500).json({ message: "Internal server error.", success: false });
     }
 };
+
 
 exports.getUser = async (req, res) => {
     try {
@@ -113,7 +113,8 @@ exports.getUser = async (req, res) => {
         
         const filteredUser = {
             _id: user._id,
-            name: user.name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             mobile: user.mobile,
             address: user.address,
             profilePic: user.profilePic,
@@ -137,81 +138,64 @@ exports.getUser = async (req, res) => {
     }
 };
 
-exports.updateIncident = async (req, res) => {
-    try {
-        const { message } = req.body; 
-        const incidentId = req.params.id;
+exports.updateIncidentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const user = req.user;
 
-        console.log("Message: ", message, "IncidentId: ", incidentId);
+    const allowedStatuses = ["reported", "under review", "in progress", "resolved", "dismissed"];
 
-        // Validate incident ID
-        if (!mongoose.Types.ObjectId.isValid(incidentId)) {
-            return res.status(400).json({
-                message: "Invalid incident ID.",
-                success: false,
-            });
-        }
-
-        // Validate message
-        if (!message || typeof message !== 'string' || message.trim() === '') {
-            return res.status(400).json({
-                message: "Message must be a non-empty string.",
-                success: false,
-            });
-        }
-
-        // Find and update the incident
-        const updatedIncident = await incidentModel.findByIdAndUpdate(
-            incidentId,
-            { $push: { messages: { text: message, date: new Date() } } }, // Ensure 'messages' field exists in Schema
-            { new: true }
-        );
-
-        if (!updatedIncident) {
-            return res.status(404).json({
-                message: "Incident not found.",
-                success: false,
-            });
-        }
-
-        // Ensure incident has a valid reporter
-        if (!updatedIncident.reportedBy) {
-            return res.status(400).json({
-                message: "Incident reporter not found.",
-                success: false,
-            });
-        }
-
-        // Find reporter
-        const incidentReporter = await User.findById(updatedIncident.reportedBy);
-        if (!incidentReporter) {
-            return res.status(404).json({
-                message: "Reporter not found.",
-                success: false,
-            });
-        }
-
-        // Update notifications
-        incidentReporter.notifications.push({
-            text: message,
-            incidentId: incidentId,
-        });
-
-        await incidentReporter.save();
-
-        return res.json({
-            message: "Incident updated successfully!",
-            success: true,
-            updatedIncident,
-        });
-    } catch (error) {
-        console.error("Error in updating incident:", error);
-        return res.status(500).json({
-            message: "Internal server error.",
-            success: false,
-        });
+    if (user.role !== "authority") {
+      return res.status(403).json({ success: false, message: "Only authority can update incident status" });
     }
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status" });
+    }
+
+    const incident = await incidentModel.findByIdAndUpdate(id, { status }, { new: true });
+    if (!incident) {
+      return res.status(404).json({ success: false, message: "Incident not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Status updated", incident });
+  } catch (error) {
+    console.error("Error updating incident:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };
+
+exports.sendMessageToReporter = async (req, res) => {
+  try {
+    const { id } = req.params; // incident id
+    const { message } = req.body;
+    const user = req.user;
+
+    if (user.role !== "authority") {
+      return res.status(403).json({ success: false, message: "Only authority can send messages" });
+    }
+
+    const incident = await incidentModel.findById(id);
+    if (!incident) {
+      return res.status(404).json({ success: false, message: "Incident not found" });
+    }
+
+    incident.messages.push({
+      text: message,
+      sentBy: user._id,
+      sentAt: new Date(),
+    });
+
+    await incident.save();
+
+    res.status(200).json({ success: true, message: "Message sent successfully", incident });
+  } catch (error) {
+    console.error("Error sending message:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 
 exports.assignIncident = async (req, res) => {
     try {
@@ -265,59 +249,59 @@ exports.assignIncident = async (req, res) => {
     }
 };
 
-exports.updateIncidentStatus = async (req, res) => {
-    try {
-        const { incidentId, status } = req.body;
+// exports.updateIncidentStatus = async (req, res) => {
+//     try {
+//         const { incidentId, status } = req.body;
 
-        if (!incidentId || !status) {
-            return res.status(400).json({
-                message: "Incident ID and status are required",
-                success: false
-            });
-        }
+//         if (!incidentId || !status) {
+//             return res.status(400).json({
+//                 message: "Incident ID and status are required",
+//                 success: false
+//             });
+//         }
 
-        const validStatuses = ['reported', 'under review', 'resolved', 'dismissed'];
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json({
-                message: "Invalid status. Must be one of: reported, under review, resolved, dismissed",
-                success: false
-            });
-        }
+//         const validStatuses = ['reported', 'under review', 'resolved', 'dismissed'];
+//         if (!validStatuses.includes(status)) {
+//             return res.status(400).json({
+//                 message: "Invalid status. Must be one of: reported, under review, resolved, dismissed",
+//                 success: false
+//             });
+//         }
 
-        const incident = await incidentModel.findById(incidentId);
-        if (!incident) {
-            return res.status(404).json({
-                message: "Incident not found",
-                success: false
-            });
-        }
+//         const incident = await incidentModel.findById(incidentId);
+//         if (!incident) {
+//             return res.status(404).json({
+//                 message: "Incident not found",
+//                 success: false
+//             });
+//         }
 
-        incident.status = status;
-        await incident.save();
+//         incident.status = status;
+//         await incident.save();
 
-        // Add notification to reporter
-        const reporter = await User.findById(incident.reportedBy);
-        if (reporter) {
-            reporter.notifications.push({
-                text: `Your incident "${incident.title}" status has been updated to: ${status}`,
-                incidentId: incidentId
-            });
-            await reporter.save();
-        }
+//         // Add notification to reporter
+//         const reporter = await User.findById(incident.reportedBy);
+//         if (reporter) {
+//             reporter.notifications.push({
+//                 text: `Your incident "${incident.title}" status has been updated to: ${status}`,
+//                 incidentId: incidentId
+//             });
+//             await reporter.save();
+//         }
 
-        return res.json({
-            message: "Incident status updated successfully",
-            success: true,
-            incident
-        });
-    } catch (error) {
-        console.error("Error updating incident status:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false
-        });
-    }
-};
+//         return res.json({
+//             message: "Incident status updated successfully",
+//             success: true,
+//             incident
+//         });
+//     } catch (error) {
+//         console.error("Error updating incident status:", error);
+//         return res.status(500).json({
+//             message: "Internal server error",
+//             success: false
+//         });
+//     }
+// };
 
 exports.getAssignedIncidents = async (req, res) => {
     try {

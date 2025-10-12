@@ -14,7 +14,7 @@ const Signup = () => {
     password: "",
   });
   const [aadharFile, setAadharFile] = useState(null);
-  const [photoFile, setPhotoFile] = useState(null);
+  const [profilePic, setprofilePic] = useState(null);
 
   const { register } = useAuthStore();
 
@@ -23,9 +23,9 @@ const Signup = () => {
     if (file) setAadharFile(file);
   };
 
-  const handlePhotoFile = (e) => {
+  const handleprofilePic = (e) => {
     const file = e.target.files[0];
-    if (file) setPhotoFile(file);
+    if (file) setprofilePic(file);
   };
 
   const validateFormData = () => {
@@ -54,7 +54,7 @@ const Signup = () => {
       data.append("address", formData.address);
       data.append("password", formData.password);
       data.append("aadharCard", aadharFile); // Append the raw file
-      data.append("photo", photoFile); // Append the raw file
+      data.append("profilePic", profilePic); // Append the raw file
 
       // Call register and pass the FormData object.
       register(data);
@@ -117,7 +117,7 @@ const Signup = () => {
             type="file"
             name="photo"
             placeholder="Upload Profile Photo"
-            onChange={handlePhotoFile}
+            onChange={handleprofilePic}
             className="file-input file-input-bordered w-full"
           />
           <textarea

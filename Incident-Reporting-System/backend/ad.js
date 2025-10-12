@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-require('dotenv').config({ path: './backend/.env' });
+require('dotenv').config();
 
 // Import the User model
 const User = require('./models/user.model.js');
@@ -10,7 +10,7 @@ const User = require('./models/user.model.js');
 async function createAdmin() {
     try {
         // Connect to MongoDB
-        await mongoose.connect("mongodb://localhost:27017");
+        await mongoose.connect(process.env.MONGO_URL);
         console.log('✅ Connected to MongoDB');
 
         const adminEmail = 'paranade370123@kkwagh.edu.in';

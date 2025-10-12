@@ -32,7 +32,7 @@ const IncidentForm = () => {
     incidentData.append("location", formData.location);
     incidentData.append("severity", formData.severity);
     if (photoFile) incidentData.append("image", photoFile);
-    await reportIncident(formData);
+    await reportIncident(incidentData);
   };
 
   return (

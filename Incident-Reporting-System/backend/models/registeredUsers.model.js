@@ -4,53 +4,56 @@ const registeredUserSchema = new mongoose.Schema({
     firstName: {
         type: String,
         required: true,
-    },
-    password: {
-        type: String,
-        required: true,
+        trim: true
     },
     lastName: {
         type: String,
         required: true,
+        trim: true
     },
     email: {
         type: String,
         required: true,
         unique: true,
+        trim: true,
+        lowercase: true
     },
     mobile: {
-        type: String, // Kept as String to accommodate country codes if needed
+        type: String,
         required: true,
         unique: true,
+        trim: true
+    },
+    password: {
+        type: String,
+        required: true
     },
     aadharCard: {
         type: String,
         required: true,
         unique: true,
+        trim: true
     },
-    photo: {
+    profilePic: {
         type: String,
-        required: true,
-        unique: true,
+        required: true
     },
     address: {
         type: String,
         required: true,
+        trim: true
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected'], // Track the verification status
-        default: 'pending',
-    }, 
-    createdAt: {
-        type: Date,
-        default: Date.now,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
     },
-    updatedAt: {
-        type: Date,
-        default: Date.now,
-    },
+    rejectionReason: {
+        type: String,
+        default: null
+    }
+}, { 
+    timestamps: true 
 });
 
-// Export the model
 module.exports = mongoose.model('RegisteredUser', registeredUserSchema);

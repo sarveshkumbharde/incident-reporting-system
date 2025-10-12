@@ -4,69 +4,90 @@ const incidentSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
-        trim: true,
+        trim: true
     },
     description: {
         type: String,
         required: true,
-        trim: true,
+        trim: true
     },
     location: {
         type: String,
-        required: true,
+        required: true
     },
     reportedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: true
     },
-    report: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Report',
-    },
-    image : {
-        type : String,
-        require : true,
+    image: {
+        type: String,
+        required: true
     },
     severity: {
         type: String,
         enum: ['low', 'medium', 'high', 'critical'],
-        default: 'high',
+        default: 'high'
     },
     status: {
         type: String,
-        enum: ['reported', 'under review', 'resolved', 'dismissed'],
-        default: 'reported',
+        enum: ['reported', 'under review', 'in progress', 'resolved', 'dismissed'],
+        default: 'reported'
     },
-    message: [
-        {
-            text: {
-                type: String,
-                required: true,
-            },
-            date: {
-                type: Date,
-                default: Date.now,
-            },
-        },
-    ],
-    feedback: {
+    assignedTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    messages: [{
         text: {
             type: String,
+            required: true
         },
-        rating: {
-            type: Number,
-            min: 1,
-            max: 5,
+        sentBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
         },
-        submittedAt: {
+        sentAt: {
             type: Date,
+            default: Date.now
+        }
+    }],
+    feedback: [{
+        message: {
+            type: String,
+            required: true
         },
         submittedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
+            required: true
         },
-    },
-}, { timestamps: true }); // Automatically manage createdAt and updatedAt
+        role: {
+            type: String,
+            enum: ['user', 'authority', 'admin'],
+            required: true
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    resolutionDetails: {
+        resolvedAt: {
+            type: Date
+        },
+        resolvedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        resolutionNotes: {
+            type: String
+        }
+    }
+}, { 
+    timestamps: true 
+});
 
 module.exports = mongoose.model('Incident', incidentSchema);

@@ -1,185 +1,317 @@
-import React, { useEffect, useState } from "react";
-import PropTypes from "prop-types";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
 import { useAuthStore } from "../../stores/authStore";
-import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const IncidentCard = ({
+  _id,
   title,
   description,
-  location,
-  reportedBy,
-  severity,
-  status,
   image,
-  createdAt,
-  _id,
+  status,
+  reportedBy,
+  assignedTo,
+  feedback = [],
 }) => {
-  const { findUser, updateIncident, isUpdating, markIncidentSolved, viewReport} = useAuthStore();
-  const navigate = useNavigate();
-  const [userName, setUserName] = useState("Loading...");
-  const [showTextArea, setShowTextArea] = useState(false);
-  const [formData, setFormData] = useState({ message: "" });
+  const {
+    authUser,
+    authRole,
+    updateStatus,
+    markComplete,
+    sendMessage,
+    assignIncident,
+    getAllAuthorities,
+    addFeedback,
+  } = useAuthStore();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const user = await findUser(reportedBy);
-        setUserName(user?.name || "Unknown User");
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        setUserName("Error fetching user");
-      }
-    };
+  const [newStatus, setNewStatus] = useState(status);
+  const [message, setMessage] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [authorities, setAuthorities] = useState([]);
+  const [selectedAuthority, setSelectedAuthority] = useState("");
+  const [showAssignMenu, setShowAssignMenu] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
-    fetchUser();
-  }, [reportedBy, findUser]);
+  // Determine if this incident belongs to current authority
+  const isAssignedToMe =
+    authRole === "authority" && assignedTo?._id === authUser?._id;
 
-  const handleNavigate = () => {
-    navigate(`/view-user/${reportedBy}`);
-  };
-
-  const handleSubmit = async () => {
-    try {
-      await updateIncident(formData, _id);
-    } catch (error) {
-      console.log("Error in submission: ", error);
-    }
-  };
-
-  const updateTextArea = () => {
-    setShowTextArea(!showTextArea);
-  };
-
-  const handleMarkAscompleted = async (id) => {
-    await markIncidentSolved(id);
-    viewReport(id);
-    navigate('/view-report')    
+  // Hide incident from authority if not assigned to them
+  if (authRole === "authority" && !isAssignedToMe) {
+    return null;
   }
 
+  const handleStatusChange = async () => {
+    setIsLoading(true);
+    const success = await updateStatus(_id, newStatus);
+    if (success) {
+      toast.success("Status updated successfully!");
+    }
+    setIsLoading(false);
+  };
+
+  const handleMarkComplete = async () => {
+    setIsLoading(true);
+    const success = await markComplete(_id);
+    if (success) {
+      toast.success("Incident marked as complete!");
+    }
+    setIsLoading(false);
+  };
+
+  const handleSendMessage = async () => {
+    if (!message.trim()) {
+      toast.error("Please enter a message");
+      return;
+    }
+    setIsLoading(true);
+    const success = await sendMessage(_id, message);
+    if (success) {
+      toast.success("Message sent successfully!");
+      setMessage("");
+    }
+    setIsLoading(false);
+  };
+
+  const handleAssign = async () => {
+    if (!selectedAuthority) {
+      toast.error("Please select an authority");
+      return;
+    }
+    setIsLoading(true);
+    const success = await assignIncident(_id, selectedAuthority);
+    if (success) {
+      toast.success("Incident assigned successfully!");
+      setShowAssignMenu(false);
+    }
+    setIsLoading(false);
+  };
+
+  const handleAddFeedback = async () => {
+    if (!feedbackMessage.trim()) {
+      toast.error("Please enter your feedback");
+      return;
+    }
+    setIsLoading(true);
+    const success = await addFeedback(_id, feedbackMessage);
+    if (success) {
+      toast.success("Feedback submitted successfully!");
+      setFeedbackMessage("");
+      setShowFeedback(false);
+    }
+    setIsLoading(false);
+  };
+
+  const openAssignMenu = async () => {
+    setIsLoading(true);
+    const auths = await getAllAuthorities();
+    setAuthorities(auths);
+    setShowAssignMenu(true);
+    setIsLoading(false);
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }} // Fade in with slight slide-up effect
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      whileHover={{ scale: 1.02 }} // Slight scale-up on hover
-      className="flex flex-col bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-2xl transition overflow-hidden max-w-4xl mx-auto my-6"
-    >
-      {/* Image Section */}
-      <div className="w-full h-72 md:h-96"> {/* Adjusted height for better visibility */}
-        <img
-          src={image}
-          alt="Incident"
-          className="w-full h-full object-contain" // Changed to object-contain to fit the image
-        />
-      </div>
+    <div className="border rounded-lg p-4 shadow-md bg-white mb-4">
+      <h2 className="font-bold text-xl">{title}</h2>
+      <p className="text-gray-600">{description}</p>
+      <img
+        src={image}
+        alt="incident"
+        className="w-full h-64 object-contain my-2"
+      />
 
-      {/* Content Section */}
-      <div className="p-6 flex flex-col">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4 hover:text-blue-500 transition-colors duration-200">
-          {title}
-        </h2>
-
-        <p className="text-gray-600 mb-3">
-          <strong>Description:</strong> {description}
+      {/* Incident Info */}
+      <div className="text-sm text-gray-500 mb-2">
+        <p>
+          Status: <span className="font-semibold">{status}</span>
         </p>
-        <p className="text-gray-600 mb-2">
-          <strong>Location:</strong> {location}
-        </p>
-        <p className="text-gray-600 mb-2 flex items-center">
-          <strong>Reported By:</strong> {userName}
-          <button
-            onClick={handleNavigate}
-            className="ml-4 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-          >
-            View User
-          </button>
-        </p>
-        <p className="text-gray-600 mb-2">
-          <strong>Severity:</strong>{" "}
-          <span className={`font-bold ${getSeverityColor(severity)}`}>
-            {severity}
+        <p>
+          Reported by:{" "}
+          <span className="font-semibold">
+            {reportedBy?.firstName} {reportedBy?.lastName}
           </span>
         </p>
-        <p className="text-gray-600">
-          <strong>Status:</strong> {status}
+        {assignedTo && (
+          <p>
+            Assigned to:{" "}
+            <span className="font-semibold">
+              {assignedTo?.firstName} {assignedTo?.lastName}
+            </span>
+          </p>
+        )}
+        <p>
+          Your role: <span className="font-semibold">{authRole}</span>
         </p>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="mt-6 flex items-center space-x-4">
-          <button
-          onClick={() => handleMarkAscompleted(_id)}
-          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
-            Mark as complete
-          </button>
-          <button
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-            onClick={updateTextArea}
+      {/* Status Control (Assigned Authority only) */}
+      {authRole === "authority" && isAssignedToMe && (
+        <div className="flex items-center gap-2 mt-2">
+          <select
+            value={newStatus}
+            onChange={(e) => setNewStatus(e.target.value)}
+            className="border p-1 rounded"
+            disabled={isLoading}
           >
-            Update
+            <option value="reported">Reported</option>
+            <option value="under review">Under Review</option>
+            <option value="in progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+          <button
+            onClick={handleStatusChange}
+            disabled={isLoading}
+            className="bg-blue-500 text-white px-3 py-1 rounded disabled:bg-blue-300"
+          >
+            {isLoading ? "Updating..." : "Update Status"}
           </button>
         </div>
+      )}
 
-        <p className="text-gray-500 text-sm mt-4">
-          <strong>Reported On:</strong> {new Date(createdAt).toLocaleDateString()}
-        </p>
-
-        {/* Conditionally render the text area with animation */}
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={showTextArea ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="overflow-hidden mt-4"
+      {/* Mark Complete (Assigned Authority only) */}
+      {authRole === "authority" && isAssignedToMe && (
+        <button
+          onClick={handleMarkComplete}
+          disabled={isLoading}
+          className="bg-green-500 text-white px-4 py-2 mt-2 rounded disabled:bg-green-300"
         >
-          {showTextArea && (
-            <div>
-              <textarea
-                className="w-full p-2 border border-gray-300 rounded-lg"
-                placeholder="Enter updated information here..."
-                value={formData.message}
-                onChange={(e) => setFormData({ message: e.target.value })}
-              ></textarea>
+          {isLoading ? "Processing..." : "Mark Complete"}
+        </button>
+      )}
 
-              <button
-                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-                onClick={handleSubmit}
+      {/* Send Message (Assigned Authority only) */}
+      {authRole === "authority" && isAssignedToMe && (
+        <div className="mt-4">
+          <textarea
+            placeholder="Send a message to the user..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="border p-2 rounded w-full"
+            disabled={isLoading}
+            rows="3"
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={isLoading || !message.trim()}
+            className="bg-indigo-500 text-white px-4 py-2 mt-2 rounded disabled:bg-indigo-300"
+          >
+            {isLoading ? "Sending..." : "Send Message"}
+          </button>
+        </div>
+      )}
+
+      {/* Assign (Admin only) */}
+      {authRole === "admin" && (
+        <>
+          <button
+            onClick={openAssignMenu}
+            disabled={isLoading}
+            className="bg-yellow-500 text-white px-4 py-2 mt-3 rounded disabled:bg-yellow-300"
+          >
+            {isLoading ? "Loading..." : "Assign Incident"}
+          </button>
+          {showAssignMenu && (
+            <div className="mt-2 border p-2 rounded bg-gray-50">
+              <select
+                onChange={(e) => setSelectedAuthority(e.target.value)}
+                className="border p-1 rounded w-full"
+                disabled={isLoading}
               >
-                {isUpdating ? "Updating..." : "Update"}
+                <option value="">Select Authority</option>
+                {authorities.map((auth) => (
+                  <option key={auth._id} value={auth._id}>
+                    {auth.firstName} {auth.lastName}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAssign}
+                disabled={isLoading || !selectedAuthority}
+                className="bg-green-600 text-white px-3 py-1 mt-2 rounded disabled:bg-green-300"
+              >
+                {isLoading ? "Assigning..." : "Assign"}
               </button>
             </div>
           )}
-        </motion.div>
+        </>
+      )}
+
+      {/* Feedback Section (User and Authority) */}
+      <div className="mt-4 border-t pt-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold">Feedback & Messages</h3>
+          <button
+            onClick={() => setShowFeedback(!showFeedback)}
+            className="bg-gray-500 text-white px-3 py-1 rounded text-sm"
+          >
+            {showFeedback ? "Cancel" : "Add Feedback"}
+          </button>
+        </div>
+
+        {/* Add Feedback Form */}
+        {showFeedback && (
+          <div className="mt-2">
+            <textarea
+              placeholder="Enter your feedback or message..."
+              value={feedbackMessage}
+              onChange={(e) => setFeedbackMessage(e.target.value)}
+              className="border p-2 rounded w-full"
+              disabled={isLoading}
+              rows="3"
+            />
+            <button
+              onClick={handleAddFeedback}
+              disabled={isLoading || !feedbackMessage.trim()}
+              className="bg-purple-500 text-white px-4 py-2 mt-2 rounded disabled:bg-purple-300"
+            >
+              {isLoading ? "Submitting..." : "Submit Feedback"}
+            </button>
+          </div>
+        )}
+
+        {/* Display Existing Feedback */}
+        <div className="mt-3 space-y-2">
+          {feedback && feedback.length > 0 ? (
+            feedback.map((item, index) => (
+              <div
+                key={index}
+                className={`border-l-4 pl-3 py-2 bg-gray-50 rounded ${
+                  item.role === "user"
+                    ? "border-green-500"
+                    : item.role === "authority"
+                    ? "border-blue-500"
+                    : "border-yellow-500"
+                }`}
+              >
+                <p className="text-sm text-gray-800">{item.message}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      item.role === "user"
+                        ? "bg-green-100 text-green-800"
+                        : item.role === "authority"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
+                    {item.role === "user"
+                      ? "👤 User"
+                      : item.role === "authority"
+                      ? "🛡️ Authority"
+                      : "⚡ Admin"}
+                  </span>
+                  • {new Date(item.timestamp).toLocaleString()}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-sm">No feedback yet.</p>
+          )}
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
-};
-
-// PropTypes for type-checking
-IncidentCard.propTypes = {
-  title: PropTypes.string.isRequired,
-  description: PropTypes.string.isRequired,
-  location: PropTypes.string.isRequired,
-  reportedBy: PropTypes.string.isRequired,
-  severity: PropTypes.oneOf(["low", "medium", "high", "critical"]).isRequired,
-  status: PropTypes.oneOf(["reported", "under review", "resolved", "dismissed"]).isRequired,
-  image: PropTypes.string.isRequired,
-  createdAt: PropTypes.string.isRequired,
-};
-
-// Helper function to set severity color
-const getSeverityColor = (severity) => {
-  switch (severity) {
-    case "low":
-      return "text-green-500";
-    case "medium":
-      return "text-yellow-500";
-    case "high":
-      return "text-red-500";
-    case "critical":
-      return "text-purple-600";
-    default:
-      return "text-gray-500";
-  }
 };
 
 export default IncidentCard;

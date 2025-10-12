@@ -80,9 +80,9 @@ const Navbar = () => {
             <Link to="/user-dashboard" className="text-base font-medium text-gray-700 hover:text-primary">
               Home
             </Link>
-            <Link to="/user-dashboard" className="text-base font-medium text-gray-700 hover:text-primary flex items-center">
+            <Link to="/incidents" className="text-base font-medium text-gray-700 hover:text-primary flex items-center">
               <Shield className="w-4 h-4 mr-1" />
-              User Dashboard
+              Incidents
             </Link>
             <Link to="/report" className="text-base font-medium text-gray-700 hover:text-primary flex items-center">
               <AlertTriangle className="w-4 h-4 mr-1" />

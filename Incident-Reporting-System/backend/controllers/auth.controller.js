@@ -1,157 +1,174 @@
-const RegisteredUser = require('../models/registeredUsers.model.js'); 
-const reportModel = require('../models/report.model.js')
-const bcrypt = require('bcryptjs');
-const cloudinary = require('../config/cloudinary.js');
-const {generateToken} = require('../config/utils.js');
-const User = require('../models/user.model.js');
-const Incident = require('../models/incident.model.js');
-const ReportModel = require('../models/report.model.js');
+const RegisteredUser = require("../models/registeredUsers.model.js");
+const bcrypt = require("bcryptjs");
+const { generateToken } = require("../config/utils.js");
+const User = require("../models/user.model.js");
+const Incident = require("../models/incident.model.js");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-require('dotenv').config();
+require("dotenv").config();
 const incidentModel = require("../models/incident.model.js");
-const userModel = require('../models/user.model.js');
+const userModel = require("../models/user.model.js");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const {uploadOnCloudinary} = require("../config/cloudinary.js");
 
 exports.predictSeverity = async (description) => {
-    try {
-        const prompt = `Given the incident description: "${description}", predict its severity in one word (low, medium, high, critical).`;
-        const result = await model.generateContent(prompt);
-        return result.response.text().toLowerCase().trim();
-    } catch (error) {
-        console.error("Error generating content:", error);
-    }
+  try {
+    const prompt = `Given the incident description: "${description}", predict its severity in one word (low, medium, high, critical).`;
+    const result = await model.generateContent(prompt);
+    return result.response.text().toLowerCase().trim();
+  } catch (error) {
+    console.error("Error generating content:", error);
+  }
 };
 
-
 exports.adminSignUp = async (req, res) => {
-    try {
-        const { firstName, lastName, email, mobile, address, password } = req.body;
+  try {
+    const { firstName, lastName, email, mobile, address, password } = req.body;
 
-        // Validate input fields
-        if (!firstName || !lastName || !email || !mobile || !address || !password) {
-            return res.status(400).json({
-                message: "All fields are required",
-                success: false,
-            });
-        }
-
-        // Check if the admin already exists
-        const existingAdmin = await User.findOne({ email, role: 'admin' });
-        if (existingAdmin) {
-            return res.status(400).json({
-                message: "Admin with this email already exists",
-                success: false,
-            });
-        }
-
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Create a new admin user
-        const newAdmin = new User({
-            firstName,
-            lastName,
-            email,
-            mobile,
-            address,
-            password: hashedPassword,
-            role: 'admin', // Explicitly set the role as 'admin'
-        });
-
-        // Save the admin user to the database
-        await newAdmin.save();
-
-        // Generate JWT token
-        const token = generateToken(newAdmin._id, res);
-
-        // Send response
-        res.status(201).json({
-            message: "Admin registered successfully",
-            success: true,
-            token,
-            admin: {
-                id: newAdmin._id,
-                firstName: newAdmin.firstName,
-                lastName: newAdmin.lastName,
-                email: newAdmin.email,
-                role: newAdmin.role,
-            },
-        });
-    } catch (error) {
-        console.error("Error in adminSignUp: ", error);
-        res.status(500).json({
-            message: "Internal server error",
-            success: false,
-        });
+    // Validate input fields
+    if (!firstName || !lastName || !email || !mobile || !address || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+        success: false,
+      });
     }
+
+    // Check if the admin already exists
+    const existingAdmin = await User.findOne({ email, role: "admin" });
+    if (existingAdmin) {
+      return res.status(400).json({
+        message: "Admin with this email already exists",
+        success: false,
+      });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new admin user
+    const newAdmin = new User({
+      firstName,
+      lastName,
+      email,
+      mobile,
+      address,
+      password: hashedPassword,
+      role: "admin", // Explicitly set the role as 'admin'
+    });
+
+    // Save the admin user to the database
+    await newAdmin.save();
+
+    // Generate JWT token
+    const token = generateToken(newAdmin._id, res);
+
+    // Send response
+    res.status(201).json({
+      message: "Admin registered successfully",
+      success: true,
+      token,
+      admin: {
+        id: newAdmin._id,
+        firstName: newAdmin.firstName,
+        lastName: newAdmin.lastName,
+        email: newAdmin.email,
+        role: newAdmin.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error in adminSignUp: ", error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
 };
 
 exports.authoritySignUp = async (req, res) => {
-    try {
-        const { firstName, lastName, email, mobile, address, password, aadharCard } = req.body;
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      mobile,
+      address,
+      password,
+    } = req.body;
 
-        // Validate input fields
-        if (!firstName || !lastName || !email || !mobile || !address || !password || !aadharCard) {
-            return res.status(400).json({
-                message: "All fields are required, including Aadhar Card.",
-                success: false,
-            });
-        }
-
-        // Check if the admin already exists
-        const existingAdmin = await User.findOne({ email, role: 'authority' });
-        if (existingAdmin) {
-            return res.status(400).json({
-                message: "Admin with this email already exists.",
-                success: false,
-            });
-        }
-
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Create a new admin user
-        const newAdmin = new User({
-            firstName,
-            lastName,
-            email,
-            mobile,
-            address,
-            password: hashedPassword,
-            aadharCard,
-            role: 'authority',
-        });
-
-        // Save the admin user to the database
-        await newAdmin.save();
-
-        // Generate JWT token
-        const token = generateToken(newAdmin._id, res);
-
-        // Send response
-        res.status(201).json({
-            message: "Admin registered successfully.",
-            success: true,
-            token,
-            admin: {
-                id: newAdmin._id,
-                firstName: newAdmin.firstName,
-                lastName: newAdmin.lastName,
-                email: newAdmin.email,
-                role: newAdmin.role,
-            },
-        });
-    } catch (error) {
-        console.error("Error in adminSignUp: ", error);
-        res.status(500).json({
-            message: "Internal server error.",
-            success: false,
-        });
+    // Validate input fields
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !mobile ||
+      !address ||
+      !password 
+    ) {
+      return res.status(400).json({
+        message: "All fields are required, including Aadhar Card.",
+        success: false,
+      });
     }
+
+    // Check if the admin already exists
+    const existingAdmin = await User.findOne({ email, role: "authority" });
+    if (existingAdmin) {
+      return res.status(400).json({
+        message: "Authority with this email already exists.",
+        success: false,
+      });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new admin user
+    const newAuthority = new User({
+      firstName,
+      lastName,
+      email,
+      mobile,
+      address,
+      password: hashedPassword,
+      aadharCard,
+      role: "authority",
+      assignedIncidents: [],
+      reportedIncidents: [],
+      notifications: [],
+    });
+
+    // Save the admin user to the database
+    await newAuthority.save();
+
+    // Generate JWT token
+    const token = generateToken(newAuthority._id, res);
+
+    // Send response
+    res.status(201).json({
+      message: "Authority registered successfully.",
+      success: true,
+      token,
+      authority: {
+        id: newAuthority._id,
+        firstName: newAuthority.firstName,
+        lastName: newAuthority.lastName,
+        email: newAuthority.email,
+        role: newAuthority.role,
+        assignedIncidents: newAuthority.assignedIncidents,
+        reportedIncidents: newAuthority.reportedIncidents,
+        aadharCard: newAuthority.aadharUrl,
+        profilePic: newAuthority.profileUrl,
+        notifications: newAuthority.notifications,
+      },
+    });
+  } catch (error) {
+    console.error("Error in authority SignUp: ", error);
+    res.status(500).json({
+      message: "Internal server error.",
+      success: false,
+    });
+  }
 };
-
-
 
 exports.signup = async (req, res) => {
   try {
@@ -167,17 +184,35 @@ exports.signup = async (req, res) => {
     }
 
     // Ensure the required files were uploaded
-    if (!req.files || !req.files.aadharCard || !req.files.photo) {
+    if (!req.files || !req.files.aadharCard || !req.files.profilePic) {
       return res.status(400).json({
         message: "Aadhar card and photo files are required",
         success: false,
       });
     }
 
+    let aadharUrl = null;
+    try {
+        const result = await uploadOnCloudinary(req.files.aadharCard[0].buffer);
+        aadharUrl = result.secure_url;
+        console.log('uploaded on cloudinary');
+    } catch (error) {
+        console.log(error);
+    }
+
+    let profileUrl = null;
+    try {
+        const result = await uploadOnCloudinary(req.files.profilePic[0].buffer);
+        profileUrl = result.secure_url;
+        console.log('uploaded on cloudinary');
+    } catch (error) {
+        console.log(error);
+    }
+
     // Check if the user already exists in either collection
     const existingRegisteredUser = await RegisteredUser.findOne({ email });
     const existingUser = await User.findOne({ email });
-    
+
     if (existingRegisteredUser || existingUser) {
       return res.status(400).json({
         message: "User already exists",
@@ -188,21 +223,17 @@ exports.signup = async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Obtain file paths from multer (the files were saved to disk)
-    const aadharCardPath = req.files.aadharCard[0].path;
-    const photoPath = req.files.photo[0].path;
-
     // Create a new registered user (pending approval)
     const newUser = new RegisteredUser({
       firstName,
       lastName,
       email,
       mobile,
-      aadharCard: aadharCardPath, // now storing local file path
-      photo: photoPath,           // now storing local file path
+      aadharCard: aadharUrl, 
+      profilePic: profileUrl, 
       address,
       password: hashedPassword,
-      status: 'pending', // explicitly set status
+      status: "pending", // explicitly set status
     });
 
     // Save the user to the database
@@ -210,7 +241,8 @@ exports.signup = async (req, res) => {
 
     // Send response without JWT token (user needs approval first)
     res.status(201).json({
-      message: "User registered successfully. Please wait for admin approval before logging in.",
+      message:
+        "User registered successfully. Please wait for admin approval before logging in.",
       success: true,
       userId: newUser._id,
       user: {
@@ -227,598 +259,639 @@ exports.signup = async (req, res) => {
   }
 };
 
-
 exports.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        // Validate input fields
-        if (!email || !password) {
-            return res.status(400).json({
-                message: "Email and password are required",
-                success: false,
-            });
-        }
-
-        console.log(email);
-        
-        // First check if user exists in the main User collection (approved users)
-        let user = await User.findOne({ email });
-        
-        // If not found in User collection, check RegisteredUser collection
-        if (!user) {
-            const registeredUser = await RegisteredUser.findOne({ email });
-            if (!registeredUser) {
-                return res.status(404).json({
-                    message: "User not found!",
-                    success: false,
-                });
-            }
-            
-            // Check if user is approved
-            if (registeredUser.status !== 'approved') {
-                return res.status(401).json({
-                    message: `Your registration is ${registeredUser.status}. Please wait for admin approval.`,
-                    success: false,
-                });
-            }
-            
-            // If approved but not in User collection, this is an error
-            return res.status(500).json({
-                message: "User approved but not found in main database. Please contact administrator.",
-                success: false,
-            });
-        }
-
-        // Check password validity
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({
-                message: "Invalid credentials",
-                success: false,
-            });
-        }
-
-        // Generate JWT token
-        const token = generateToken(user._id, res);
-        // Send response
-        res.json({
-            message: "Login successful!",
-            success: true,
-            token,
-            userId: user._id,
-            user: user,
-        });
-    } catch (error) {
-        console.error('Error in login: ', error);
-        res.status(500).json({
-            message: "Internal server error",
-            success: false,
-        });
-    }
-};
-
-exports.logout = async (req, res) => {
-    try {
-        res.cookie("jwt", "", { maxAge: 0, httpOnly: true });        
-        res.status(200).json({
-            message: "Logout successful!",
-            success: true,
-        });
-    } catch (error) {
-        console.error("Error in logout: ", error);
-        res.status(500).json({
-            message: "Internal server error",
-            success: false,
-        });
-    }
-};
-
-exports.checkApproval = async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        // Check if email is provided
-        if (!email) {
-            return res.status(400).json({
-                message: "Email is required",
-                success: false,
-            });
-        }
-
-        // Find the user by email
-        const user = await RegisteredUser.findOne({ email });
-
-        // Handle case where user is not found
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found",
-                success: false,
-            });
-        }
-
-        // Create response message and status
-        const msg = `Your status is: ${user.status}`;
-        const isApproved = user.status === "approved";
-
-        // Send response
-        return res.status(200).json({
-            message: msg,
-            success: isApproved,
-        });
-    } catch (error) {
-        console.error("Error in fetching status: ", error);
-
-        // Handle server error
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false,
-        });
-    }
-};
-
-exports.updateProfile = async (req, res) => {
-    try {
-        const { firstName, lastName, mobile, address } = req.body;
-        const userId = req.user._id;
-
-        const updateData = {};
-        if (firstName) updateData.firstName = firstName;
-        if (lastName) updateData.lastName = lastName;
-        if (mobile) updateData.mobile = mobile;
-        if (address) updateData.address = address;
-
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            updateData,
-            { new: true }
-        ).select('-password');
-
-        if (!updatedUser) {
-            return res.status(404).json({
-                message: "User not found",
-                success: false
-            });
-        }
-
-        return res.json({
-            message: "Profile updated successfully",
-            success: true,
-            user: updatedUser
-        });
-    } catch (error) {
-        console.error("Error updating profile:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false
-        });
-    }
-};
-
-exports.changePassword = async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const userId = req.user._id;
-
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({
-                message: "Current password and new password are required",
-                success: false
-            });
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found",
-                success: false
-            });
-        }
-
-        // Verify current password
-        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-        if (!isPasswordValid) {
-            return res.status(400).json({
-                message: "Current password is incorrect",
-                success: false
-            });
-        }
-
-        // Hash new password
-        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-        user.password = hashedNewPassword;
-        await user.save();
-
-        return res.json({
-            message: "Password changed successfully",
-            success: true
-        });
-    } catch (error) {
-        console.error("Error changing password:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false
-        });
-    }
-};
-
-exports.getUserIncidents = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        console.log('getUserIncidents - User ID:', userId);
-        console.log('getUserIncidents - User email:', req.user.email);
-        console.log('getUserIncidents - User role:', req.user.role);
-        
-        const incidents = await Incident.find({ reportedBy: userId })
-            .sort({ createdAt: -1 });
-
-        console.log('getUserIncidents - Found incidents:', incidents.length);
-        console.log('getUserIncidents - Incidents:', incidents);
-
-        return res.json({
-            message: "User incidents fetched successfully",
-            success: true,
-            incidents
-        });
-    } catch (error) {
-        console.error("Error fetching user incidents:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false
-        });
-    }
-};
-
-exports.getNotifications = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found",
-                success: false
-            });
-        }
-
-        return res.json({
-            message: "Notifications fetched successfully",
-            success: true,
-            notifications: user.notifications || []
-        });
-    } catch (error) {
-        console.error("Error fetching notifications:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false
-        });
-    }
-};
-
-exports.markNotificationAsRead = async (req, res) => {
-    try {
-        const { notificationId } = req.body;
-        const userId = req.user._id;
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found",
-                success: false
-            });
-        }
-
-        // Mark specific notification as read (you can add a 'read' field to notifications)
-        if (user.notifications && user.notifications.length > 0) {
-            user.notifications = user.notifications.filter(notification => 
-                notification._id.toString() !== notificationId
-            );
-            await user.save();
-        }
-
-        return res.json({
-            message: "Notification marked as read",
-            success: true
-        });
-    } catch (error) {
-        console.error("Error marking notification as read:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false
-        });
-    }
-};
-
-exports.clearAllNotifications = async (req, res) => {
-    try {
-        const userId = req.user._id;
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found",
-                success: false
-            });
-        }
-
-        user.notifications = [];
-        await user.save();
-
-        return res.json({
-            message: "All notifications cleared",
-            success: true
-        });
-    } catch (error) {
-        console.error("Error clearing notifications:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false
-        });
-    }
-};
-
-exports.reportIncident = async (req, res) => {
-    const { title, description, location } = req.body;
-    try {
-      // Validate required fields. Expect the image file from Multer in req.file.
-      if (!title || !description || !location) {
-        return res.status(400).json({
-          message: "Please fill all the fields.",
-          success: false,
-        });
-      }
-  
-      // Retrieve the image file's path from Multer
-      const imagePath = req.file ? req.file.path : null;
-  
-      // Await severity prediction (remains unchanged)
-      const severity = await this.predictSeverity(description);
-  
-      // Create new incident using the local image path instead of a Cloudinary URL
-      const incident = new Incident({
-        title,
-        description,
-        location,
-        severity,
-        reportedBy: req.user._id, // assuming req.user is set by your authentication middleware
-        image: imagePath,
-      });
-  
-      await incident.save();
-  
-      res.status(201).json({
-        message: "Incident reported successfully!",
-        success: true,
-        incident,
-      });
-    } catch (error) {
-      console.error("Error in reporting incident: ", error);
-      res.status(500).json({
-        message: "Internal Server Error",
+    // Validate input fields
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
         success: false,
       });
     }
-};  
 
-exports.getReport = async (req, res) => {
+    console.log(email);
+
+    // First check if user exists in the main User collection (approved users)
+    let user = await User.findOne({ email });
+
+    if(!user) return res.status(404).json({ success: false, message: "User doesn't exist"});
+
+    // If found in main User collection, proceed with login
+    if (user) {
+      // Check password validity
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({
+          message: "Invalid credentials",
+          success: false,
+        });
+      }
+
+      // Generate JWT token
+      const token = generateToken(user._id, res);
+
+      // Send response
+      return res.json({
+        message: "Login successful!",
+        success: true,
+        token,
+        userId: user._id,
+        user: user,
+      });
+    }
+
+    // If not found in User collection, check RegisteredUser collection
+    const registeredUser = await RegisteredUser.findOne({ email });
+    if (!registeredUser) {
+      return res.status(404).json({
+        message: "User not found! Please register first.",
+        success: false,
+      });
+    }
+
+    // Check the status of the registered user
+    if (registeredUser.status === "rejected") {
+      return res.status(403).json({
+        message:
+          "Your registration has been rejected. Please contact administration.",
+        success: false,
+      });
+    } else if (registeredUser.status === "pending") {
+      return res.status(401).json({
+        message:
+          "Your registration is pending approval. Please wait for admin approval.",
+        success: false,
+      });
+    } else if (registeredUser.status === "approved") {
+      // This should not happen - if approved, they should be in User collection
+      return res.status(500).json({
+        message:
+          "User approved but not found in main database. Please contact administrator.",
+        success: false,
+      });
+    } else {
+      return res.status(401).json({
+        message: "Invalid registration status.",
+        success: false,
+      });
+    }
+  } catch (error) {
+    console.error("Error in login: ", error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    res.cookie("jwt", "", { maxAge: 0, httpOnly: true });
+    res.status(200).json({
+      message: "Logout successful!",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error in logout: ", error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.checkApproval = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if email is provided
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+        success: false,
+      });
+    }
+
+    // Find the user by email
+    const user = await RegisteredUser.findOne({ email });
+
+    // Handle case where user is not found
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    // Create response message and status
+    const msg = `Your status is: ${user.status}`;
+    const isApproved = user.status === "approved";
+
+    // Send response
+    return res.status(200).json({
+      message: msg,
+      success: isApproved,
+    });
+  } catch (error) {
+    console.error("Error in fetching status: ", error);
+
+    // Handle server error
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, mobile, address } = req.body;
+    const userId = req.user._id;
+
+    const updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (mobile) updateData.mobile = mobile;
+    if (address) updateData.address = address;
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    }).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    return res.json({
+      message: "Profile updated successfully",
+      success: true,
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Current password and new password are required",
+        success: false,
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        message: "Current password is incorrect",
+        success: false,
+      });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+    await user.save();
+
+    return res.json({
+      message: "Password changed successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.getUserIncidents = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    console.log("getUserIncidents - User ID:", userId);
+    console.log("getUserIncidents - User email:", req.user.email);
+    console.log("getUserIncidents - User role:", req.user.role);
+
+    const incidents = await Incident.find({ reportedBy: userId }).sort({
+      createdAt: -1,
+    });
+
+    console.log("getUserIncidents - Found incidents:", incidents.length);
+    console.log("getUserIncidents - Incidents:", incidents);
+
+    return res.json({
+      message: "User incidents fetched successfully",
+      success: true,
+      incidents,
+    });
+  } catch (error) {
+    console.error("Error fetching user incidents:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.getNotifications = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    return res.json({
+      message: "Notifications fetched successfully",
+      success: true,
+      notifications: user.notifications || [],
+    });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.markNotificationAsRead = async (req, res) => {
+  try {
+    const { notificationId } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    // Mark specific notification as read (you can add a 'read' field to notifications)
+    if (user.notifications && user.notifications.length > 0) {
+      user.notifications = user.notifications.filter(
+        (notification) => notification._id.toString() !== notificationId
+      );
+      await user.save();
+    }
+
+    return res.json({
+      message: "Notification marked as read",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.clearAllNotifications = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    user.notifications = [];
+    await user.save();
+
+    return res.json({
+      message: "All notifications cleared",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error clearing notifications:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+exports.reportIncident = async (req, res) => {
+  const { title, description, location, severity } = req.body;
+  try {
+    if (!title || !description || !location || !req.file) {
+      return res.status(400).json({
+        message: "All fields including image are required",
+        success: false,
+      });
+    }
+
+    // Use predicted severity if not provided
+    // const finalSeverity = severity || (await this.predictSeverity(description));
+
+    let imageUrl = null;
     try {
-        const reportId = req.params.id;
-        const report = reportModel.findById(reportId);
-
-        if(!report){
-            return res.json({
-                message: "Report not found",
-                success: false
-            })
-        }
-
-        return res.json({
-            report: report,
-            success: true, 
-            message : "Success in fetching report!"
-        })
+        const result = await uploadOnCloudinary(req.file.buffer);
+        imageUrl = result.secure_url;
     } catch (error) {
-        console.log("Error in fetching report: ", error);
+        console.log(error);
+    }
+
+    const incident = new Incident({
+      title,
+      description,
+      location,
+      severity,
+      reportedBy: req.user._id,
+      image: imageUrl,
+      assignedTo: null,
+      messages: [],
+      feedback: [],
+      resolutionDetails: []
+    });
+
+    await incident.save();
+    return res.status(200).json({success: true, message:"Reported successfully"});
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error reporting message",
+    });
+  }
+};
+
+// exports.getReport = async (req, res) => {
+//     try {
+//         const reportId = req.params.id;
+//         const report = reportModel.findById(reportId);
+
+//         if(!report){
+//             return res.json({
+//                 message: "Report not found",
+//                 success: false
+//             })
+//         }
+
+//         return res.json({
+//             report: report,
+//             success: true,
+//             message : "Success in fetching report!"
+//         })
+//     } catch (error) {
+//         console.log("Error in fetching report: ", error);
+//         return res.json({
+//             message: "Internal Server Error",
+//             success: false
+//         })
+//     }
+// }
+
+// exports.viewIncident = async (req, res) => {
+//   const incidentId = req.params.id;
+
+//   try {
+//     const incident = await incidentModel.findById(incidentId);
+
+//     console.log(incident);
+
+//     if (!incident) {
+//       return res.json({
+//         success: false,
+//         message: "Incident doesn't exists!",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Incident fetched successfully!",
+//       incident: incident,
+//     });
+//   } catch (error) {
+//     console.log("Error in viewing incident: ", error);
+//     return res.json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+
+// exports.viewReport = async (req, res) => {
+//   const incidentId = req.params.id;
+//   try {
+//     const incident = await incidentModel.findById(incidentId);
+
+//     if (!incident) {
+//       return res.status(404).json({
+//         // Add status code
+//         success: false,
+//         message: "Incident not found!",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       // Add status code for consistency
+//       success: true,
+//       message: "Report fetched successfully!",
+//       report: incident,
+//     });
+//   } catch (error) {
+//     console.log("Error in fetching report: ", error);
+//     return res.status(500).json({
+//       // Add status code
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
+exports.viewIncidents = async (req, res) => {
+    try {
+        console.log("🔍 viewIncidents called by user:", req.user?._id);
+        console.log("🔍 User role:", req.user?.role);
+        
+        let incidents;
+        
+        // Filter incidents based on user role
+        if (req.user.role === "authority") {
+            // Authority can only see incidents assigned to them
+            incidents = await incidentModel.find({ assignedTo: req.user._id })
+                .populate('reportedBy', 'firstName lastName email')
+                .populate('assignedTo', 'firstName lastName email')
+                .populate('feedback.submittedBy', 'firstName lastName');;
+        } else if (req.user.role === "user") {
+            // Users can only see incidents they reported
+            incidents = await incidentModel.find({ reportedBy: req.user._id })
+                .populate('reportedBy', 'firstName lastName email')
+                .populate('assignedTo', 'firstName lastName email')
+                .populate('feedback.submittedBy', 'firstName lastName');
+        } else {
+            // Admin can see all incidents
+            incidents = await incidentModel.find({})
+                .populate('reportedBy', 'firstName lastName email')
+                .populate('assignedTo', 'firstName lastName email')
+                .populate('feedback.submittedBy', 'firstName lastName');
+        }
+        
+        console.log(`📊 Found ${incidents.length} incidents for ${req.user.role}`);        
+        console.log("📦 Sending response...");
+        
         return res.json({
-            message: "Internal Server Error",
+            message: "Incidents fetched!",
+            data: incidents,
+            success: true
+        });
+    } catch (error) {
+        console.log("❌ Error fetching incidents", error);
+        return res.status(500).json({
+            message: "Error fetching incidents",
             success: false
-        })        
-    }
-}
-
-exports.viewIncident = async (req, res) => {
-    const incidentId = req.params.id;
-
-    try {
-        const incident = await incidentModel.findById(incidentId);
-
-        console.log(incident);        
-
-        if(!incident){
-            return res.json({
-                success: false, 
-                message : "Incident doesn't exists!",
-            })
-        }
-
-        return res.json({
-            success : true,
-            message : "Incident fetched successfully!",
-            incident : incident,
-        })
-    } catch (error) {
-        console.log("Error in viewing incident: ", error);
-        return res.json({
-            success : false,
-            message : "Internal Server Error",
-        })
-    }
-}
-
-exports.viewReport = async (req, res) => {
-    const incidentId = req.params.id;
-    try {
-        const incident = await incidentModel.findById(incidentId);
-
-        if(!incident){
-            return res.json({
-                success : false, 
-                message : "Incident not found!"
-            });
-        }
-
-        const reportId = incident.report;
-
-        const report = await reportModel.findById(reportId);
-
-        console.log(report);
-
-        if(!report){
-            return res.json({
-                success : false, 
-                message : "Report not found!",
-            });
-        }
-
-        return res.json({
-            success : true,
-            message : "Report fetched successfully!",
-            report : report
-        })
-
-    } catch (error) {
-        console.log("Error in fetching report: ", error);
-        return res.json({
-            success : false, 
-            message : "Internal server error"
-        })
+        });        
     }
 }
 
 exports.submitFeedback = async (req, res) => {
-    try {
-        const { incidentId, feedback, rating } = req.body;
-        const userId = req.user._id;
+  try {
+    const { incidentId, feedback } = req.body;
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
-        // Validate input
-        if (!incidentId || !feedback || !rating) {
-            return res.status(400).json({
-                success: false,
-                message: 'Incident ID, feedback, and rating are required'
-            });
-        }
+    console.log("📝 Submit feedback called:", { incidentId, feedback, userId, userRole });
 
-        if (rating < 1 || rating > 5) {
-            return res.status(400).json({
-                success: false,
-                message: 'Rating must be between 1 and 5'
-            });
-        }
-
-        // Find the incident
-        const incident = await Incident.findById(incidentId);
-        if (!incident) {
-            return res.status(404).json({
-                success: false,
-                message: 'Incident not found'
-            });
-        }
-
-        // Check if user is the reporter of this incident
-        if (incident.reportedBy.toString() !== userId.toString()) {
-            return res.status(403).json({
-                success: false,
-                message: 'You can only provide feedback for incidents you reported'
-            });
-        }
-
-        // Check if incident is resolved
-        if (incident.status !== 'resolved') {
-            return res.status(400).json({
-                success: false,
-                message: 'Feedback can only be provided for resolved incidents'
-            });
-        }
-
-        // Check if feedback already exists
-        if (incident.feedback) {
-            return res.status(400).json({
-                success: false,
-                message: 'Feedback has already been submitted for this incident'
-            });
-        }
-
-        // Add feedback to incident
-        incident.feedback = {
-            text: feedback,
-            rating: rating,
-            submittedAt: new Date(),
-            submittedBy: userId
-        };
-
-        await incident.save();
-
-        // Notify authorities about the feedback
-        const authorities = await User.find({ role: 'authority' });
-        for (const authority of authorities) {
-            authority.notifications.push({
-                text: `New feedback received for incident: ${incident.title}`,
-                incidentId: incidentId,
-                type: 'feedback'
-            });
-            await authority.save();
-        }
-
-        return res.json({
-            success: true,
-            message: 'Feedback submitted successfully'
-        });
-
-    } catch (error) {
-        console.error('Error submitting feedback:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
+    // Validate input
+    if (!incidentId || !feedback) {
+      return res.status(400).json({
+        success: false,
+        message: "Incident ID and feedback are required",
+      });
     }
+
+    // Find the incident and populate necessary fields
+    const incident = await Incident.findById(incidentId)
+      .populate('reportedBy', 'firstName lastName')
+      .populate('assignedTo', 'firstName lastName');
+
+    if (!incident) {
+      return res.status(404).json({
+        success: false,
+        message: "Incident not found",
+      });
+    }
+
+    // Check who can add feedback based on role
+    let canAddFeedback = false;
+    let errorMessage = "";
+
+    if (userRole === "user") {
+      // User can only add feedback to their own incidents
+      canAddFeedback = incident.reportedBy._id.toString() === userId.toString();
+      errorMessage = "You can only add feedback to incidents you reported";
+    } else if (userRole === "authority") {
+      // Authority can only add feedback to incidents assigned to them
+      canAddFeedback = incident.assignedTo && incident.assignedTo._id.toString() === userId.toString();
+      errorMessage = "You can only add feedback to incidents assigned to you";
+    } else if (userRole === "admin") {
+      // Admin can add feedback to any incident
+      canAddFeedback = true;
+    }
+
+    if (!canAddFeedback) {
+      return res.status(403).json({
+        success: false,
+        message: errorMessage,
+      });
+    }
+
+    // Add feedback to incident (as array)
+    incident.feedback.push({
+      message: feedback,
+      submittedBy: userId,
+      role: userRole,
+      timestamp: new Date()
+    });
+
+    await incident.save();
+
+    console.log("✅ Feedback added successfully");
+
+    return res.json({
+      success: true,
+      message: "Feedback submitted successfully",
+    });
+  } catch (error) {
+    console.error("❌ Error submitting feedback:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };
-
 exports.getCurrentUser = async (req, res) => {
-    try {
-        // The user is already attached to req by the auth middleware
-        const user = req.user;
-        
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not authenticated'
-            });
-        }
+  try {
+    // The user is already attached to req by the auth middleware
+    const user = req.user;
 
-        // Return user data without sensitive information
-        const userData = {
-            _id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            mobile: user.mobile,
-            address: user.address,
-            role: user.role,
-            aadharCard: user.aadharCard,
-            profilePic: user.profilePic,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-        };
-
-        res.status(200).json({
-            success: true,
-            user: userData
-        });
-    } catch (error) {
-        console.error('Error in getCurrentUser:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
     }
+
+    // Return user data without sensitive information
+    const userData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      mobile: user.mobile,
+      address: user.address,
+      role: user.role,
+      aadharCard: user.aadharCard,
+      profilePic: user.profilePic,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    res.status(200).json({
+      success: true,
+      user: userData,
+    });
+  } catch (error) {
+    console.error("Error in getCurrentUser:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };

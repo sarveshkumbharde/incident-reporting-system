@@ -11,6 +11,9 @@ const authRoutes = require('./routes/auth.routes.js')
 const authorityRoutes = require('./routes/authority.routes.js')
 const adminRoutes = require('./routes/admin.routes.js')
 
+console.log("✅ Admin routes mounted at /api/admin");
+
+
 // Middleware
 app.use(cors({
     // origin: 'https://prabhodanyaya.netlify.app',
