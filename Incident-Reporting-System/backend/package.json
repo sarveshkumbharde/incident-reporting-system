@@ -6,8 +6,7 @@
   "scripts": {
     "start": "nodemon server.js"
   },
-  "author": "Sanket K. Belekar",
-  "license": "ISC",
+  "author": "Sarvesh Kumbharde",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@tensorflow/tfjs": "^4.22.0",
