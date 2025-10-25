@@ -71,7 +71,7 @@ const Home = () => {
       }
 
       if (endpoint) {
-        const response = await fetch(`http://localhost:5000/api${endpoint}`, {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
           credentials: 'include'
         });
         if (response.ok) {
