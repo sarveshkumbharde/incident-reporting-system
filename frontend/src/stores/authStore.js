@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { axiosInstance } from "./axios";
 import toast from "react-hot-toast";
+import {API_BASE_URL} from '../../api.js';
 
 // In your component, you'd need to use a different approach since this is a store
 

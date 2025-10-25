@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { Mail, Phone, User, Home, CreditCard, Calendar, Bell, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { axiosInstance } from '../../stores/axios';
+import {API_BASE_URL} from '../../api.js';
 
 const Profile = () => {
   const { authUser } = useAuthStore();
@@ -15,7 +17,7 @@ const Profile = () => {
       try {
         setLoading(true);
         // Fetch complete user data with populated incidents
-        const response = await fetch('http://localhost:5000/api/auth/profile', {
+        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
           credentials: 'include'
         });
         
