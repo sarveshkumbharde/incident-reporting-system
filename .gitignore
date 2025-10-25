@@ -1,7 +1,13 @@
-frontend/node_modules
-frontend/dist
-backend/node_modules
-backend/dist
-backend/.env
-backend/.env.local
-backend/uploads
+# Ignore specific files in root
+/TROUBLESHOOTING.md
+/ROUTES_COMPLETION_SUMMARY.md
+/IMPLEMENTATION_SUMMARY.md
+/IMPLEMENTATION_UPDATES.md
+
+# Ignore backend dependencies and environment files
+/backend/node_modules/
+/backend/.env
+
+# Ignore frontend dependencies and environment files
+/frontend/node_modules/
+/frontend/.env
