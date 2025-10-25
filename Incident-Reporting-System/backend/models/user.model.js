@@ -60,14 +60,10 @@ const userSchema = new mongoose.Schema({
         text: {
             type: String,
             required: true
-        },
+        }, 
         incidentId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Incident'
-        },
-        isRead: {
-            type: Boolean,
-            default: false
         },
         type: {
             type: String,

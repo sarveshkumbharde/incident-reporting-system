@@ -107,7 +107,7 @@ exports.viewRegistrations = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      users: formattedUsers,
+      users: formattedUsers, 
     });
   } catch (error) {
     console.error("Error in viewing registrations: ", error);

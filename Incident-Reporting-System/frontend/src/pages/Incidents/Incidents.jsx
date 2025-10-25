@@ -49,7 +49,7 @@ const Incident = () => {
   }
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
+    <div className="p-4 bg-gray-200 min-h-screen">
       <div className="mb-4">
         <h1 className="text-2xl font-bold">
           {authRole === "admin" && "All Incidents"}
@@ -65,9 +65,6 @@ const Incident = () => {
         <div key={incident._id || index} className="mb-4">
           <IncidentCard 
             {...incident} 
-            currentUser={authUser}
-            authRole={authRole}
-            authUser={authUser}
           />
         </div>
       ))}

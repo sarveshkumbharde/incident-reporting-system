@@ -173,7 +173,6 @@ exports.authoritySignUp = async (req, res) => {
 exports.signup = async (req, res) => {
   try {
     const { firstName, lastName, email, mobile, address, password } = req.body;
-    console.log(req.body);
 
     // Check if all required fields are provided
     if (!firstName || !lastName || !email || !mobile || !address || !password) {
@@ -186,30 +185,41 @@ exports.signup = async (req, res) => {
     // Ensure the required files were uploaded
     if (!req.files || !req.files.aadharCard || !req.files.profilePic) {
       return res.status(400).json({
-        message: "Aadhar card and photo files are required",
+        message: "Aadhar card and profile picture are required",
         success: false,
       });
     }
 
-    let aadharUrl = null;
+    let aadharCardUrl = null;
+    let profilePicUrl = null;
+
+    // Upload Aadhar card
     try {
-        const result = await uploadOnCloudinary(req.files.aadharCard[0].buffer);
-        aadharUrl = result.secure_url;
-        console.log('uploaded on cloudinary');
+      const result = await uploadOnCloudinary(req.files.aadharCard[0].buffer);
+      aadharCardUrl = result.secure_url;
+      console.log('Aadhar uploaded:', aadharCardUrl);
     } catch (error) {
-        console.log(error);
+      console.error("Aadhar upload failed:", error);
+      return res.status(400).json({
+        message: "Aadhar card upload failed",
+        success: false,
+      });
     }
 
-    let profileUrl = null;
+    // Upload profile picture
     try {
-        const result = await uploadOnCloudinary(req.files.profilePic[0].buffer);
-        profileUrl = result.secure_url;
-        console.log('uploaded on cloudinary');
+      const result = await uploadOnCloudinary(req.files.profilePic[0].buffer);
+      profilePicUrl = result.secure_url;
+      console.log('Profile pic uploaded:', profilePicUrl);
     } catch (error) {
-        console.log(error);
+      console.error("Profile pic upload failed:", error);
+      return res.status(400).json({
+        message: "Profile picture upload failed",
+        success: false,
+      });
     }
 
-    // Check if the user already exists in either collection
+    // Check if user already exists
     const existingRegisteredUser = await RegisteredUser.findOne({ email });
     const existingUser = await User.findOne({ email });
 
@@ -220,42 +230,45 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // Hash the password
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new registered user (pending approval)
+    // Create new user - make sure field names match schema
     const newUser = new RegisteredUser({
       firstName,
       lastName,
       email,
       mobile,
-      aadharCard: aadharUrl, 
-      profilePic: profileUrl, 
+      aadharCard: aadharCardUrl,  // This matches schema
+      profilePic: profilePicUrl,   // This matches schema (not 'photo')
       address,
       password: hashedPassword,
-      status: "pending", // explicitly set status
+      status: "pending",
     });
 
-    // Save the user to the database
     await newUser.save();
 
-    // Send response without JWT token (user needs approval first)
     res.status(201).json({
-      message:
-        "User registered successfully. Please wait for admin approval before logging in.",
+      message: "User registered successfully. Please wait for admin approval.",
       success: true,
       userId: newUser._id,
-      user: {
-        id: newUser._id,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        email: newUser.email,
-        status: newUser.status,
-      },
     });
   } catch (error) {
     console.error("Error in signup: ", error);
-    res.status(500).json({ message: "Internal server error", success: false });
+    
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ 
+        message: `User with this ${field} already exists`,
+        success: false 
+      });
+    }
+    
+    res.status(500).json({ 
+      message: "Internal server error", 
+      success: false 
+    });
   }
 };
 
@@ -529,7 +542,7 @@ exports.getNotifications = async (req, res) => {
         message: "User not found",
         success: false,
       });
-    }
+    } 
 
     return res.json({
       message: "Notifications fetched successfully",
@@ -895,3 +908,135 @@ exports.getCurrentUser = async (req, res) => {
     });
   }
 };
+
+exports.getMessages = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    console.log("📨 Getting messages for user:", userId, "Role:", userRole);
+
+    let messages = [];
+
+    if (userRole === "user") {
+      // For users: Get all incidents they reported and extract messages
+      const userIncidents = await Incident.find({ reportedBy: userId })
+        .populate('messages.sentBy', 'firstName lastName role profilePic')
+        .populate('assignedTo', 'firstName lastName role')
+        .select('title messages status assignedTo createdAt');
+
+      // Extract and format messages from all incidents
+      userIncidents.forEach(incident => {
+        incident.messages.forEach(message => {
+          messages.push({
+            _id: message._id,
+            text: message.text,
+            sentBy: message.sentBy,
+            sentAt: message.sentAt,
+            incidentId: incident._id,
+            incidentTitle: incident.title,
+            incidentStatus: incident.status,
+            assignedTo: incident.assignedTo
+          });
+        });
+      });
+
+    } else if (userRole === "authority") {
+      // For authorities: Get messages from incidents assigned to them
+      const assignedIncidents = await Incident.find({ assignedTo: userId })
+        .populate('messages.sentBy', 'firstName lastName role profilePic')
+        .populate('reportedBy', 'firstName lastName')
+        .select('title messages status reportedBy createdAt');
+
+      assignedIncidents.forEach(incident => {
+        incident.messages.forEach(message => {
+          messages.push({
+            _id: message._id,
+            text: message.text,
+            sentBy: message.sentBy,
+            sentAt: message.sentAt,
+            incidentId: incident._id,
+            incidentTitle: incident.title,
+            incidentStatus: incident.status,
+            reportedBy: incident.reportedBy
+          });
+        });
+      });
+
+    } else if (userRole === "admin") {
+      // For admins: Get messages from all incidents
+      const allIncidents = await Incident.find()
+        .populate('messages.sentBy', 'firstName lastName role profilePic')
+        .populate('reportedBy', 'firstName lastName')
+        .populate('assignedTo', 'firstName lastName')
+        .select('title messages status reportedBy assignedTo createdAt');
+
+      allIncidents.forEach(incident => {
+        incident.messages.forEach(message => {
+          messages.push({
+            _id: message._id,
+            text: message.text,
+            sentBy: message.sentBy,
+            sentAt: message.sentAt,
+            incidentId: incident._id,
+            incidentTitle: incident.title,
+            incidentStatus: incident.status,
+            reportedBy: incident.reportedBy,
+            assignedTo: incident.assignedTo
+          });
+        });
+      });
+    }
+
+    // Sort messages by date (newest first)
+    messages.sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+    console.log(`📨 Found ${messages.length} messages for ${userRole}`);
+
+    return res.json({
+      success: true,
+      message: "Messages fetched successfully",
+      messages: messages,
+      totalCount: messages.length
+    });
+
+  } catch (error) {
+    console.error("❌ Error fetching messages:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+exports.viewIncident = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Add await and populate related fields
+    const incident = await incidentModel.findById(id)
+      .populate('reportedBy', 'firstName lastName email')
+      .populate('assignedTo', 'firstName lastName email')
+      .populate('messages.sentBy', 'firstName lastName role')
+      .populate('feedback.submittedBy', 'firstName lastName role');
+
+    if (!incident) {
+      return res.status(404).json({
+        success: false,
+        message: "Incident not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true, 
+      incident: incident,
+      message: "Incident fetched successfully"
+    });
+  } catch (error) {
+    console.log("Error in viewIncident:", error);
+    return res.status(500).json({
+      success: false, 
+      message: "Internal server error"
+    });
+  }
+}

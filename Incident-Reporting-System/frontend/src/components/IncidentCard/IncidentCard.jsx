@@ -23,7 +23,7 @@ const IncidentCard = ({
     addFeedback,
   } = useAuthStore();
 
-  const [newStatus, setNewStatus] = useState(status);
+  const [newStatus, setNewStatus] = useState(status); 
   const [message, setMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [authorities, setAuthorities] = useState([]);

@@ -12,7 +12,7 @@ exports.getIncidentById = async (req, res) => {
             return res.status(404).json({ message: 'Incident not found' });
         }
 
-        return res.json({
+        return res.json({ 
             incident: incident,
             message : "Fetched event"
         })

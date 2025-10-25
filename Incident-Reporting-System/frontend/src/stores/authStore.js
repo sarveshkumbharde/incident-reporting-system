@@ -228,15 +228,44 @@ export const useAuthStore = create(
       incident: {},
       viewIncident: async (id) => {
         try {
-          const res = await axiosInstance.get(`/auth/view-incidents`);
+          console.log("🔄 Fetching incident with ID:", id);
+          const res = await axiosInstance.get(`/auth/view-incident/${id}`);
+
           if (res.data.success) {
             set({ incident: res.data.incident });
+            console.log("✅ Incident fetched:", res.data.incident);
             toast.success("Incident fetched successfully!");
+            return res.data.incident; // Return the incident data
           } else {
-            toast.error(res.data.message);
+            toast.error(res.data.message || "Failed to fetch incident");
+            return null;
           }
         } catch (error) {
-          toast.error("Internal server error!");
+          console.error("❌ Error fetching incident:", error);
+          const errorMessage =
+            error.response?.data?.message || "Internal server error!";
+          toast.error(errorMessage);
+          return null;
+        }
+      },
+
+      getMessages: async () => {
+        try {
+          const res = await axiosInstance.get("/auth/messages");
+          console.log("📨 Messages response:", res.data);
+
+          if (res.data.success) {
+            return res.data.messages;
+          } else {
+            toast.error(res.data.message || "Failed to fetch messages");
+            return [];
+          }
+        } catch (error) {
+          console.error("❌ Error fetching messages:", error);
+          const errorMessage =
+            error.response?.data?.message || "Failed to fetch messages";
+          toast.error(errorMessage);
+          return [];
         }
       },
 
@@ -318,9 +347,12 @@ export const useAuthStore = create(
       // Inside useAuthStore or useIncidentStore
       updateStatus: async (id, status) => {
         try {
-          const res = await axiosInstance.put(`/authority/update-status/${id}`, {
-            status,
-          });
+          const res = await axiosInstance.put(
+            `/authority/update-status/${id}`,
+            {
+              status,
+            }
+          );
           if (res.data.success) {
             toast.success("Status updated successfully!");
             return true;
@@ -418,7 +450,7 @@ export const useAuthStore = create(
         try {
           const res = await axiosInstance.post(`/auth/submit-feedback`, {
             incidentId: id,
-            feedback: message
+            feedback: message,
           });
           if (res.data.success) {
             toast.success("Feedback added successfully!");
@@ -437,7 +469,7 @@ export const useAuthStore = create(
 
       viewIncidents: async () => {
         try {
-          const res = await axiosInstance.get("/auth/view-incidents"); 
+          const res = await axiosInstance.get("/auth/view-incidents");
           if (Array.isArray(res.data.data)) {
             set({ incidents: res.data.data });
           } else {
@@ -446,7 +478,7 @@ export const useAuthStore = create(
         } catch (error) {
           toast.error("Failed to fetch incidents.");
         }
-      },
+      }, 
     }),
 
     {

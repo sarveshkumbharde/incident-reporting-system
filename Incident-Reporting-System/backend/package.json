@@ -6,7 +6,7 @@
   "scripts": {
     "start": "nodemon server.js"
   },
-  "author": "Sanket K. Belekar",
+  "author": "Sarvesh Kumbharde",
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

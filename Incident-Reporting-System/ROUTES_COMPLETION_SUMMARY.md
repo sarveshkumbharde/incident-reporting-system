@@ -117,6 +117,7 @@ The Incident Reporting System is now **FULLY FUNCTIONAL** with all routes comple
    - View dashboard statistics
 
 3. **Admins can**:
+   - Assign incidents to Authorities
    - Approve/reject user registrations
    - Manage all users
    - View system-wide statistics

@@ -31,7 +31,6 @@ const registeredUserSchema = new mongoose.Schema({
     aadharCard: {
         type: String,
         required: true,
-        unique: true,
         trim: true
     },
     profilePic: {
