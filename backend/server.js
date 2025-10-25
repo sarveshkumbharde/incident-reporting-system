@@ -19,7 +19,7 @@ app.use(cors({
     // origin: 'https://prabhodanyaya.netlify.app',
     // methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     // allowedHeaders: ['Content-Type', 'Authorization'],
-    origin: 'https://incident-reporting-system-gules.vercel.app/',
+    origin: 'https://incident-reporting-system-yx43.vercel.app',
     credentials: true
   }));
   
