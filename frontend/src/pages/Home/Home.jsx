@@ -4,6 +4,7 @@ import { Pie, Line } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from "chart.js";
 import { useAuthStore } from "../../stores/authStore";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "../../api";
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -45,7 +46,7 @@ const Home = () => {
       } else if (authUser) {
         // For regular users, fetch their personal stats
         console.log('Home - Using user incidents endpoint');
-        const incidentsResponse = await fetch('http://localhost:5000/api/auth/user-incidents', {
+        const incidentsResponse = await fetch(`${API_BASE_URL}/auth/user-incidents`, {
           credentials: 'include'
         });
         console.log('Home - User incidents response status:', incidentsResponse.status);
