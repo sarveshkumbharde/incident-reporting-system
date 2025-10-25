@@ -10,6 +10,7 @@ import {
   TrendingUp, 
   FileText
 } from 'lucide-react';
+import { API_BASE_URL } from '../../api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -30,7 +31,7 @@ const AuthorityDashboard = () => {
       setLoading(true);
       
       // Fetch authority dashboard stats
-      const statsResponse = await fetch('http://localhost:5000/api/authority/dashboard', {
+      const statsResponse = await fetch(`${API_BASE_URL}/authority/dashboard`, {
         credentials: 'include'
       });
       const statsData = await statsResponse.json();

@@ -11,6 +11,7 @@ import {
   TrendingUp, 
   UserCheck
 } from 'lucide-react';
+import { API_BASE_URL } from '../../api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -30,7 +31,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       // Fetch dashboard stats
-      const statsResponse = await fetch('http://localhost:5000/api/admin/dashboard-stats', {
+      const statsResponse = await fetch(`${API_BASE_URL}/admin/dashboard-stats`, {
         credentials: 'include'
       });
       const statsData = await statsResponse.json();
