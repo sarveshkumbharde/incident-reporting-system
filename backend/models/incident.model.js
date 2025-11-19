@@ -39,21 +39,21 @@ const incidentSchema = new mongoose.Schema({
         ref: 'User',
         default: null
     },
-    messages: [{
-        text: {
-            type: String,
-            required: true
-        },
-        sentBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            required: true
-        },
-        sentAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
+    // messages: [{
+    //     text: {
+    //         type: String,
+    //         required: true
+    //     },
+    //     sentBy: {
+    //         type: mongoose.Schema.Types.ObjectId,
+    //         ref: 'User',
+    //         required: true
+    //     },
+    //     sentAt: {
+    //         type: Date,
+    //         default: Date.now
+    //     }
+    // }],
     feedback: [{
         message: {
             type: String,

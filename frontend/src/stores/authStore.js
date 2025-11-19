@@ -259,25 +259,25 @@ export const useAuthStore = create(
         }
       },
 
-      getMessages: async () => {
-        try {
-          const res = await axiosInstance.get("/auth/messages");
-          console.log("📨 Messages response:", res.data);
+      // getMessages: async () => {
+      //   try {
+      //     const res = await axiosInstance.get("/auth/messages");
+      //     console.log("📨 Messages response:", res.data);
 
-          if (res.data.success) {
-            return res.data.messages;
-          } else {
-            toast.error(res.data.message || "Failed to fetch messages");
-            return [];
-          }
-        } catch (error) {
-          console.error("❌ Error fetching messages:", error);
-          const errorMessage =
-            error.response?.data?.message || "Failed to fetch messages";
-          toast.error(errorMessage);
-          return [];
-        }
-      },
+      //     if (res.data.success) {
+      //       return res.data.messages;
+      //     } else {
+      //       toast.error(res.data.message || "Failed to fetch messages");
+      //       return [];
+      //     }
+      //   } catch (error) {
+      //     console.error("❌ Error fetching messages:", error);
+      //     const errorMessage =
+      //       error.response?.data?.message || "Failed to fetch messages";
+      //     toast.error(errorMessage);
+      //     return [];
+      //   }
+      // },
 
       report: {},
       viewReport: async (id) => {

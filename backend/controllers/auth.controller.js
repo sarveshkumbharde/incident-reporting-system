@@ -986,7 +986,7 @@ exports.viewIncident = async (req, res) => {
       .findById(id)
       .populate("reportedBy", "firstName lastName email")
       .populate("assignedTo", "firstName lastName email")
-      .populate("messages.sentBy", "firstName lastName role")
+      // .populate("messages.sentBy", "firstName lastName role")
       .populate("feedback.submittedBy", "firstName lastName role");
 
     if (!incident) {
