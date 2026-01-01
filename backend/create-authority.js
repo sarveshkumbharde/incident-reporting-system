@@ -10,7 +10,7 @@ mongoose.connect(process.env.MONGO_URL)
 
 async function createAuthority() {
   try {
-    const email = 'sarukumbharde@gmail.com';
+    const email = 'sarveshkumbharde@rediffmail.com';
     const password = '123456';
 
     // Check if authority already exists

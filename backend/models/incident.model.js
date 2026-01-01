@@ -39,21 +39,6 @@ const incidentSchema = new mongoose.Schema({
         ref: 'User',
         default: null
     },
-    // messages: [{
-    //     text: {
-    //         type: String,
-    //         required: true
-    //     },
-    //     sentBy: {
-    //         type: mongoose.Schema.Types.ObjectId,
-    //         ref: 'User',
-    //         required: true
-    //     },
-    //     sentAt: {
-    //         type: Date,
-    //         default: Date.now
-    //     }
-    // }],
     feedback: [{
         message: {
             type: String,
@@ -65,7 +50,7 @@ const incidentSchema = new mongoose.Schema({
             required: true
         },
         role: {
-            type: String,
+            type: String, 
             enum: ['user', 'authority', 'admin'],
             required: true
         },

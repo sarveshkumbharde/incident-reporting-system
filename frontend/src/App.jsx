@@ -28,7 +28,7 @@ function App() {
 
   // Initialize authentication on app startup
   useEffect(() => {
-    if (!authUser) initializeAuth();
+    initializeAuth();
   }, []);
 
   // Debug auth state changes

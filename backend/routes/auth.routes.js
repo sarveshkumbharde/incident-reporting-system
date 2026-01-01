@@ -82,13 +82,13 @@ router.post("/mark-notification-read", protectRoute, markNotificationAsRead);
 router.delete("/clear-notifications", protectRoute, clearAllNotifications);
 router.get("/user-incidents", protectRoute, getUserIncidents);
 // router.put("/update-profile", protectRoute, updateProfile);
-router.put("/change-password", protectRoute, changePassword);
+// router.put("/change-password", protectRoute, changePassword);
 router.get('/profile',protectRoute, getProfile)
 
 // Incident and report viewing
 router.get("/view-incident/:id", protectRoute, viewIncident)
 router.get("/view-incidents", protectRoute, viewIncidents);
-router.get("/messages", protectRoute, getMessages);
+// router.get("/messages", protectRoute, getMessages);
 // router.get("/view-report/:id", protectRoute, viewReport);
 
 // Feedback

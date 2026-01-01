@@ -13,7 +13,7 @@ router.get('/assigned-incidents', protectRoute, authorityProtect, getAssignedInc
 // router.put('/mark-solved/:id', protectRoute, authorityProtect, markIncidentAsSolved);
 // router.post('/assign-incident', protectRoute, authorityProtect, assignIncident);
 router.put('/update-status/:id', protectRoute, authorityProtect, updateIncidentStatus);
-router.post("/send-message/:id", protectRoute, sendMessageToReporter);
+// router.post("/send-message/:id", protectRoute, sendMessageToReporter);
 
 
 // Dashboard

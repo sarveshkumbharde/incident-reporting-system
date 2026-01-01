@@ -6,6 +6,7 @@ const connectDB = require('./config/db.js');
 const bodyParser = require('body-parser')
 const app = express();
 const path = require("path");
+const mongoose = require("mongoose")
 
 const PORT = process.env.PORT || 5000;
 
@@ -15,12 +16,27 @@ const adminRoutes = require('./routes/admin.routes.js')
 
 console.log("✅ Admin routes mounted at /api/admin");
 
+const http = require("http");
+const { Server } = require("socket.io");
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173',
+    credentials: true
+  }
+});
+
+// make io available everywhere
+app.set("io", io);
+
+ const {socketHandler} = require('./sockets/index.js');
+ socketHandler(io);
+
 
 // Middleware
 app.use(cors({
-    // origin: 'https://prabhodanyaya.netlify.app',
-    // methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    // allowedHeaders: ['Content-Type', 'Authorization'],
     origin: 'http://localhost:5173',
     credentials: true
   }));
@@ -28,27 +44,19 @@ app.use(cors({
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(express.json());
-app.use(bodyParser.json({ limit: '20mb' })); // Adjust the size limit accordingly
-app.use(bodyParser.urlencoded({ limit: '20mb', extended: true }));
 app.use(cookieParser());
 
 
 // Database Connection
 connectDB()
-    .then(() => console.log("MongoDB connected successfully!"))
-    .catch(err => console.error("MongoDB connection failed:", err));
-
-// Server Listening
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
 
 app.use('/api/auth', authRoutes);
 app.use('/api/authority', authorityRoutes);
 app.use('/api/admin', adminRoutes);
 
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
 // Graceful Shutdown
 process.on('SIGINT', async () => {

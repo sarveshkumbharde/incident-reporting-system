@@ -44,46 +44,6 @@ exports.viewIncidents = async (req, res) => {
     }
 }
 
-// exports.markIncidentAsSolved = async (req, res) => {
-//     try {
-//         const incidentId = req.params.id;
-
-//         const incident = await incidentModel.findById(incidentId);
-//         if (!incident) {
-//             return res.status(404).json({ message: "Incident not found.", success: false });
-//         }
-
-//         if (incident.status === 'resolved') {
-//             return res.status(400).json({ message: "Incident is already resolved.", success: false });
-//         }
-
-//         incident.status = 'resolved';
-//         await incident.save();
-
-//         const reportedBy = await User.findById(incident.reportedBy);
-
-//         const msg = `The case "${incident.title}" is resolved. Please check the reports section.`;
-//         if (reportedBy && reportedBy.notifications) {
-//             reportedBy.notifications.push({
-//                 text: msg,
-//                 incidentId: incidentId,
-//             });
-//             await reportedBy.save();
-//         }
-
-//         return res.json({
-//             message: "Incident marked as resolved, and report generated.",
-//             success: true,
-//             updatedIncident: incident,
-//             // generatedReport: report,
-//         });
-        
-//     } catch (error) {
-//         console.error("Error marking incident as resolved:", error);
-//         return res.status(500).json({ message: "Internal server error.", success: false });
-//     }
-// };
-
 
 exports.getUser = async (req, res) => {
     try {
@@ -126,116 +86,6 @@ exports.getUser = async (req, res) => {
     }
 };
 
-// exports.updateIncidentStatus = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { status } = req.body;
-//     const user = req.user;
-
-//     const allowedStatuses = ["reported", "under review", "in progress", "resolved", "dismissed"];
-
-//     if (user.role !== "authority") {
-//       return res.status(403).json({ success: false, message: "Only authority can update incident status" });
-//     }
-
-//     if (!allowedStatuses.includes(status)) {
-//       return res.status(400).json({ success: false, message: "Invalid status" });
-//     }
-
-//     const incident = await incidentModel.findByIdAndUpdate(id, { status }, { new: true });
-//     if (!incident) {
-//       return res.status(404).json({ success: false, message: "Incident not found" });
-//     }
-
-//     res.status(200).json({ success: true, message: "Status updated", incident });
-//   } catch (error) {
-//     console.error("Error updating incident:", error);
-//     res.status(500).json({ success: false, message: "Internal server error" });
-//   }
-// };
-
-exports.sendMessageToReporter = async (req, res) => {
-  try {
-    const { id } = req.params; // incident id
-    const { message } = req.body;
-    const user = req.user;
-
-    if (user.role !== "authority") {
-      return res.status(403).json({ success: false, message: "Only authority can send messages" });
-    }
-
-    const incident = await incidentModel.findById(id);
-    if (!incident) {
-      return res.status(404).json({ success: false, message: "Incident not found" });
-    }
-
-    incident.messages.push({
-      text: message,
-      sentBy: user._id,
-      sentAt: new Date(),
-    });
-
-    await incident.save();
-
-    res.status(200).json({ success: true, message: "Message sent successfully", incident });
-  } catch (error) {
-    console.error("Error sending message:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
-
-
-// exports.assignIncident = async (req, res) => {
-//     try {
-//         const { incidentId, assignedTo } = req.body;
-
-//         if (!incidentId || !assignedTo) {
-//             return res.status(400).json({
-//                 message: "Incident ID and assigned user are required",
-//                 success: false
-//             });
-//         }
-
-//         const incident = await incidentModel.findById(incidentId);
-//         if (!incident) {
-//             return res.status(404).json({
-//                 message: "Incident not found",
-//                 success: false
-//             });
-//         }
-
-//         const assignedUser = await User.findById(assignedTo);
-//         if (!assignedUser || assignedUser.role !== 'authority') {
-//             return res.status(400).json({
-//                 message: "Invalid authority user",
-//                 success: false
-//             });
-//         }
-
-//         incident.assignedTo = assignedTo;
-//         incident.status = 'under review';
-//         await incident.save();
-
-//         // Add notification to assigned authority
-//         assignedUser.notifications.push({
-//             text: `You have been assigned incident: ${incident.title}`,
-//             incidentId: incidentId
-//         });
-//         await assignedUser.save();
-
-//         return res.json({
-//             message: "Incident assigned successfully",
-//             success: true,
-//             incident
-//         });
-//     } catch (error) {
-//         console.error("Error assigning incident:", error);
-//         return res.status(500).json({
-//             message: "Internal server error",
-//             success: false
-//         });
-//     }
-// };
 
 exports.updateIncidentStatus = async (req, res) => {
     try {
@@ -280,12 +130,14 @@ exports.updateIncidentStatus = async (req, res) => {
         incident.status = status;
         await incident.save();
 
+        const io = req.app.get('io');
         // Add notification to reporter
         await sendNotification(
             incident.reportedBy,
             `Your incident "${incident.title}" is now "${status}".`,
             incidentId,
-            "info"
+            "info",
+            io
         );
 
         return res.json({

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Menu,
   Bell,
@@ -16,8 +16,15 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const { authUser, logout, authRole, notifications, messages } =
-    useAuthStore();
+  const authUser = useAuthStore((s) => s.authUser);
+  const authRole = useAuthStore((s) => s.authRole);
+  const notifications = useAuthStore((s) => s.notifications);
+  const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+  console.log("🔔 Navbar notifications changed:", notifications.length);
+}, [notifications]);
+
 
   const handleLogout = async () => {
     await logout();
@@ -260,7 +267,10 @@ const Navbar = () => {
         {/* Notifications - visible to ALL roles */}
         {shouldShowBellIcon && (
           <div className="dropdown dropdown-end">
-            <button onClick={()=>navigate('/notifications')} className="btn btn-ghost btn-circle">
+            <button
+              onClick={() => navigate("/notifications")}
+              className="btn btn-ghost btn-circle"
+            >
               <div className="indicator">
                 <Bell className="w-6 h-6" />
 

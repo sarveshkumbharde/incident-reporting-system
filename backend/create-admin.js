@@ -11,7 +11,7 @@ const User = require('./models/user.model.js');
 
 async function createAdmin() {
   try {
-    const email = 'paranade370123@kkwagh.edu.in';
+    const email = 'kumbhardesarvesh@gmail.com';
     const password = '123456';
     
     // Check if admin already exists

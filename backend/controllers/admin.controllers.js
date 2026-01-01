@@ -197,12 +197,14 @@ exports.assignIncident = async (req, res) => {
         incident.assignedTo = authorityId;
         await incident.save();
 
+        const io = req.app.get('io');
         // 🔥 Notify authority
         await sendNotification(
             authorityId,
             `You have been assigned a new incident: "${incident.title}".`,
             incidentId,
-            "warning"
+            "warning",
+            io
         );
 
         // 🔥 Notify user who reported it
@@ -210,7 +212,8 @@ exports.assignIncident = async (req, res) => {
             incident.reportedBy,
             `Your incident "${incident.title}" has been assigned to an authority.`,
             incidentId,
-            "info"
+            "info",
+            io
         );
 
         res.json({ success: true, message: "Incident assigned successfully" });

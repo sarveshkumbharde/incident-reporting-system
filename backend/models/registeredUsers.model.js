@@ -47,10 +47,6 @@ const registeredUserSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
-    // rejectionReason: {
-    //     type: String,
-    //     default: null
-    // }
 }, { 
     timestamps: true 
 });

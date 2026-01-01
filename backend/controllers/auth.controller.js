@@ -3,14 +3,12 @@ const bcrypt = require("bcryptjs");
 const { generateToken } = require("../config/utils.js");
 const User = require("../models/user.model.js");
 const Incident = require("../models/incident.model.js");
-// const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config();
 const incidentModel = require("../models/incident.model.js");
 const userModel = require("../models/user.model.js");
-// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API);
-// const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 const { uploadOnCloudinary } = require("../config/cloudinary.js");
 const { sendNotification } = require("../utils/sendNotification");
+
 
 
 exports.getProfile = async (req, res) => {
@@ -432,92 +430,6 @@ exports.checkApproval = async (req, res) => {
   }
 };
 
-// exports.updateProfile = async (req, res) => {
-//   try {
-//     const { firstName, lastName, mobile, address } = req.body;
-//     const userId = req.user._id;
-
-//     const updateData = {};
-//     if (firstName) updateData.firstName = firstName;
-//     if (lastName) updateData.lastName = lastName;
-//     if (mobile) updateData.mobile = mobile;
-//     if (address) updateData.address = address;
-
-//     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
-//       new: true,
-//     }).select("-password");
-
-//     if (!updatedUser) {
-//       return res.status(404).json({
-//         message: "User not found",
-//         success: false,
-//       });
-//     }
-
-//     return res.json({
-//       message: "Profile updated successfully",
-//       success: true,
-//       user: updatedUser,
-//     });
-//   } catch (error) {
-//     console.error("Error updating profile:", error);
-//     return res.status(500).json({
-//       message: "Internal server error",
-//       success: false,
-//     });
-//   }
-// };
-
-exports.changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const userId = req.user._id;
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        message: "Current password and new password are required",
-        success: false,
-      });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-        success: false,
-      });
-    }
-
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password
-    );
-    if (!isPasswordValid) {
-      return res.status(400).json({
-        message: "Current password is incorrect",
-        success: false,
-      });
-    }
-
-    // Hash new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedNewPassword;
-    await user.save();
-
-    return res.json({
-      message: "Password changed successfully",
-      success: true,
-    });
-  } catch (error) {
-    console.error("Error changing password:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      success: false,
-    });
-  }
-};
-
 exports.getUserIncidents = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -690,13 +602,16 @@ exports.reportIncident = async (req, res) => {
     });
 
     await incident.save();
+    const io = req.app.get('io');
+    console.log("🔥 IO INSTANCE:", !!io);
 
     // ⭐ Notify the user
     await sendNotification(
       req.user._id,
       `Your incident "${title}" has been reported successfully.`,
       incident._id,
-      "success"
+      "success",
+      io
     );
 
     // ⭐ Notify all admins
@@ -707,7 +622,8 @@ exports.reportIncident = async (req, res) => {
         admin._id,
         `A new incident "${title}" has been reported by ${req.user.firstName}.`,
         incident._id,
-        "warning"
+        "warning",
+        io
       );
     }
 
@@ -880,102 +796,6 @@ exports.getCurrentUser = async (req, res) => {
   }
 };
 
-exports.getMessages = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const userRole = req.user.role;
-
-    console.log("📨 Getting messages for user:", userId, "Role:", userRole);
-
-    let messages = [];
-
-    if (userRole === "user") {
-      // For users: Get all incidents they reported and extract messages
-      const userIncidents = await Incident.find({ reportedBy: userId })
-        .populate("messages.sentBy", "firstName lastName role profilePic")
-        .populate("assignedTo", "firstName lastName role")
-        .select("title messages status assignedTo createdAt");
-
-      // Extract and format messages from all incidents
-      userIncidents.forEach((incident) => {
-        incident.messages.forEach((message) => {
-          messages.push({
-            _id: message._id,
-            text: message.text,
-            sentBy: message.sentBy,
-            sentAt: message.sentAt,
-            incidentId: incident._id,
-            incidentTitle: incident.title,
-            incidentStatus: incident.status,
-            assignedTo: incident.assignedTo,
-          });
-        });
-      });
-    } else if (userRole === "authority") {
-      // For authorities: Get messages from incidents assigned to them
-      const assignedIncidents = await Incident.find({ assignedTo: userId })
-        .populate("messages.sentBy", "firstName lastName role profilePic")
-        .populate("reportedBy", "firstName lastName")
-        .select("title messages status reportedBy createdAt");
-
-      assignedIncidents.forEach((incident) => {
-        incident.messages.forEach((message) => {
-          messages.push({
-            _id: message._id,
-            text: message.text,
-            sentBy: message.sentBy,
-            sentAt: message.sentAt,
-            incidentId: incident._id,
-            incidentTitle: incident.title,
-            incidentStatus: incident.status,
-            reportedBy: incident.reportedBy,
-          });
-        });
-      });
-    } else if (userRole === "admin") {
-      // For admins: Get messages from all incidents
-      const allIncidents = await Incident.find()
-        .populate("messages.sentBy", "firstName lastName role profilePic")
-        .populate("reportedBy", "firstName lastName")
-        .populate("assignedTo", "firstName lastName")
-        .select("title messages status reportedBy assignedTo createdAt");
-
-      allIncidents.forEach((incident) => {
-        incident.messages.forEach((message) => {
-          messages.push({
-            _id: message._id,
-            text: message.text,
-            sentBy: message.sentBy,
-            sentAt: message.sentAt,
-            incidentId: incident._id,
-            incidentTitle: incident.title,
-            incidentStatus: incident.status,
-            reportedBy: incident.reportedBy,
-            assignedTo: incident.assignedTo,
-          });
-        });
-      });
-    }
-
-    // Sort messages by date (newest first)
-    messages.sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
-
-    console.log(`📨 Found ${messages.length} messages for ${userRole}`);
-
-    return res.json({
-      success: true,
-      message: "Messages fetched successfully",
-      messages: messages,
-      totalCount: messages.length,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching messages:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
 
 exports.viewIncident = async (req, res) => {
   try {

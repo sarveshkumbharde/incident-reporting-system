@@ -46,12 +46,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-    // Track incidents reported by this user
     reportedIncidents: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Incident'
     }],
-    // Track incidents assigned to this user (for authorities)
     assignedIncidents: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Incident'
@@ -77,7 +75,7 @@ const userSchema = new mongoose.Schema({
         }
     }]
 }, { 
-    timestamps: true // Adds createdAt and updatedAt automatically
+    timestamps: true 
 });
 
 module.exports = mongoose.model('User', userSchema);

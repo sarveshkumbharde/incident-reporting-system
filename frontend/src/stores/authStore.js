@@ -2,8 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { axiosInstance } from "./axios";
 import toast from "react-hot-toast";
-
-// In your component, you'd need to use a different approach since this is a store
+import socket from "../socket.js";
 
 export const useAuthStore = create(
   persist(
@@ -15,7 +14,8 @@ export const useAuthStore = create(
       isLoggingIn: false,
       isUpdating: false,
       isCheckingApproval: false,
-      isReportingIncident: false, 
+      isReportingIncident: false,
+      hasSocketListener: false,
       incidents: [],
       registrations: [],
       notifications: [],
@@ -23,17 +23,26 @@ export const useAuthStore = create(
       initializeAuth: async () => {
         try {
           const res = await axiosInstance.get("/auth/me");
+
           set({
             authUser: res.data.user,
             authRole: res.data.user.role,
           });
-        } catch (error) {
-          // ❗ IMPORTANT: Do NOT log the 401 error.
-          // It just means "no user logged in", which is normal.
-          set({
-            authUser: null,
-            authRole: null,
-          });
+
+          if (!socket.connected) socket.connect();
+
+            socket.emit(
+              "register",
+              {
+                userId: res.data.user._id,
+                role: res.data.user.role,
+              },
+            );
+
+          await get().fetchNotifications(); // baseline
+          get().listenToNotifications(); // realtime
+        } catch {
+          set({ authUser: null, authRole: null });
         }
       },
 
@@ -47,7 +56,14 @@ export const useAuthStore = create(
               authUser: res.data.user,
               authRole: res.data.user.role || null,
             });
-
+            if (!socket.connected) {
+              socket.connect();
+            }
+            const loggedInUser = res.data.user;
+            socket.emit("register", {
+              userId: loggedInUser._id,
+              role: loggedInUser.role,
+            });
             const userRole = res.data.user.role;
             if (userRole === "admin") {
               window.location.href = "/admin-dashboard";
@@ -65,6 +81,26 @@ export const useAuthStore = create(
         } finally {
           set({ isLoggingIn: false });
         }
+      },
+
+      listenToNotifications: () => {
+        const { hasSocketListener } = get();
+        if (hasSocketListener) return;
+
+        socket.on("notification", (notification) => {
+          const normalized = {
+            ...notification,
+            isRead: false,
+          };
+
+          set((state) => ({
+            notifications: [normalized, ...state.notifications],
+          }));
+
+          toast.success(notification.text);
+        });
+
+        set({ hasSocketListener: true });
       },
 
       register: async (data) => {
@@ -99,7 +135,7 @@ export const useAuthStore = create(
 
           set({ authUser: null, authRole: null });
 
-          // Optional but recommended
+          socket.disconnect();
           window.location.href = "/login";
         } catch (error) {
           toast.error(error.response?.data?.message || "Logout failed!");
@@ -208,19 +244,19 @@ export const useAuthStore = create(
         }
       },
 
-      getNotifications: async () => {
-        try {
-          const res = await axiosInstance.get("/auth/notifications");
-          if (res.data.success) {
-            set({ notifications: res.data.notifications });
-            toast.success("Notifications fetched successfully!");
-          } else {
-            toast.error(res.data.message);
-          }
-        } catch (error) {
-          toast.error("Internal Server Error");
-        }
-      },
+      // getNotifications: async () => {
+      //   try {
+      //     const res = await axiosInstance.get("/auth/notifications");
+      //     if (res.data.success) {
+      //       set({ notifications: res.data.notifications });
+      //       toast.success("Notifications fetched successfully!");
+      //     } else {
+      //       toast.error(res.data.message);
+      //     }
+      //   } catch (error) {
+      //     toast.error("Internal Server Error");
+      //   }
+      // },
 
       incident: {},
 
@@ -534,7 +570,12 @@ export const useAuthStore = create(
           const res = await axiosInstance.get("/auth/notifications");
 
           if (res.data.success) {
-            set({ notifications: res.data.notifications });
+            const normalized = res.data.notifications.map((n) => ({
+              ...n,
+              isRead: n.isRead ?? false,
+            }));
+
+            set({ notifications: normalized });
           }
         } catch (error) {
           console.error("Error fetching notifications:", error);
