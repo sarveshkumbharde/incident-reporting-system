@@ -34,7 +34,7 @@ async function createAuthority() {
       aadharCard: '745238764371',
       password: hashedPassword,
       role: 'authority',
-      approved: true  // ✅ (optional: if your model uses admin approval)
+      status: 'approved'
     });
 
     await authorityUser.save();

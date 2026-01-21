@@ -18,7 +18,6 @@ import ViewIncident from "./pages/ViewIncident/ViewIncident";
 import AdminDashboard from "./pages/AdminDashboard/AdminDashboard";
 import AuthorityDashboard from "./pages/AuthorityDashboard/AuthorityDashboard";
 import UserDashboard from "./pages/UserDashboard/UserDashboard";
-import GetMessages from "./pages/GetMessages/GetMessages.jsx";
 import AuthRedirect from "./components/AuthRedirect/AuthRedirect.jsx";
 import AdminUsers from "./pages/AdminUsers/AdminUsers.jsx";
 import Notifications from "./pages/Notifications/Notifications.jsx";
@@ -87,11 +86,6 @@ function App() {
         <Route
           path="/signup"
           element={authUser ? <AuthRedirect /> : <Signup />}
-        />
-
-        <Route
-          path="/get-messages"
-          element={authUser ? <GetMessages /> : <Signup />}
         />
 
         <Route path="/incidents" element={<Incidents />} />

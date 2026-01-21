@@ -1,4 +1,3 @@
-const RegisteredUser = require("../models/registeredUsers.model.js");
 const bcrypt = require("bcryptjs");
 const { generateToken } = require("../config/utils.js");
 const User = require("../models/user.model.js");
@@ -9,19 +8,17 @@ const userModel = require("../models/user.model.js");
 const { uploadOnCloudinary } = require("../config/cloudinary.js");
 const { sendNotification } = require("../utils/sendNotification");
 
-
-
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
       .select("-password")
-      .populate("reportedIncidents")      // 🔥 FULL incident objects
+      .populate("reportedIncidents") // 🔥 FULL incident objects
       .populate("assignedIncidents")
       .populate({
         path: "notifications.incidentId",
-        select: "title status"
-      });;     // 🔥 If authority
-      // notifications are embedded, no need to populate them
+        select: "title status",
+      }); // 🔥 If authority
+    // notifications are embedded, no need to populate them
 
     if (!user) {
       return res.status(404).json({
@@ -34,7 +31,6 @@ exports.getProfile = async (req, res) => {
       success: true,
       user,
     });
-
   } catch (error) {
     console.error("Error in getProfile:", error);
     res.status(500).json({
@@ -229,10 +225,9 @@ exports.signup = async (req, res) => {
     }
 
     // Check if user already exists
-    const existingRegisteredUser = await RegisteredUser.findOne({ email });
     const existingUser = await User.findOne({ email });
 
-    if (existingRegisteredUser || existingUser) {
+    if (existingUser) {
       return res.status(400).json({
         message: "User already exists",
         success: false,
@@ -243,7 +238,7 @@ exports.signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user - make sure field names match schema
-    const newUser = new RegisteredUser({
+    const newUser = new User({
       firstName,
       lastName,
       email,
@@ -305,63 +300,43 @@ exports.login = async (req, res) => {
 
     // If found in main User collection, proceed with login
     if (user) {
-      // Check password validity
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
+      if (user.status === "pending") {
         return res.status(401).json({
-          message: "Invalid credentials",
+          message:
+            "Your registration is pending approval. Please wait for admin approval.",
           success: false,
         });
+      } else if (user.status === "rejected") {
+        // This should not happen - if approved, they should be in User collection
+        return res.status(500).json({
+          message: "You're registration is rejected by admin.",
+          success: false,
+        });
+      } else if ((user.status = "approved")) {
+        // Check password validity
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+          return res.status(401).json({
+            message: "Invalid credentials",
+            success: false,
+          });
+        }
+
+        // Generate JWT token
+        const token = generateToken(user._id, res);
+
+        // Send response
+        return res.json({
+          message: "Login successful!",
+          success: true,
+          token,
+          userId: user._id,
+          user: user,
+        });
       }
-
-      // Generate JWT token
-      const token = generateToken(user._id, res);
-
-      // Send response
-      return res.json({
-        message: "Login successful!",
-        success: true,
-        token,
-        userId: user._id,
-        user: user,
-      });
     }
 
-    // If not found in User collection, check RegisteredUser collection
-    const registeredUser = await RegisteredUser.findOne({ email });
-    if (!registeredUser) {
-      return res.status(404).json({
-        message: "User not found! Please register first.",
-        success: false,
-      });
-    }
-
-    // Check the status of the registered user
-    if (registeredUser.status === "rejected") {
-      return res.status(403).json({
-        message:
-          "Your registration has been rejected. Please contact administration.",
-        success: false,
-      });
-    } else if (registeredUser.status === "pending") {
-      return res.status(401).json({
-        message:
-          "Your registration is pending approval. Please wait for admin approval.",
-        success: false,
-      });
-    } else if (registeredUser.status === "approved") {
-      // This should not happen - if approved, they should be in User collection
-      return res.status(500).json({
-        message:
-          "User approved but not found in main database. Please contact administrator.",
-        success: false,
-      });
-    } else {
-      return res.status(401).json({
-        message: "Invalid registration status.",
-        success: false,
-      });
-    }
+   
   } catch (error) {
     console.error("Error in login: ", error);
     res.status(500).json({
@@ -400,7 +375,7 @@ exports.checkApproval = async (req, res) => {
     }
 
     // Find the user by email
-    const user = await RegisteredUser.findOne({ email });
+    const user = await User.findOne({ email });
 
     // Handle case where user is not found
     if (!user) {
@@ -462,7 +437,7 @@ exports.getNotifications = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const user = await User.findById(userId).select('notifications');
+    const user = await User.findById(userId).select("notifications");
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -486,7 +461,7 @@ exports.getNotifications = async (req, res) => {
 
 exports.markNotificationAsRead = async (req, res) => {
   try {
-    const { notificationId } = req.body;   // FIXED
+    const { notificationId } = req.body; // FIXED
     const userId = req.user._id;
 
     if (!notificationId) {
@@ -514,14 +489,13 @@ exports.markNotificationAsRead = async (req, res) => {
       });
     }
 
-    notification.isRead = true;  // UPDATE THE FIELD
+    notification.isRead = true; // UPDATE THE FIELD
     await user.save();
 
     return res.json({
       success: true,
       message: "Notification marked as read",
     });
-
   } catch (error) {
     console.error("Error marking notification read:", error);
     return res.status(500).json({
@@ -534,9 +508,12 @@ exports.markNotificationAsRead = async (req, res) => {
 exports.markAllNotificationsRead = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
-    user.notifications.forEach(n => n.isRead = true);
+    user.notifications.forEach((n) => (n.isRead = true));
     await user.save();
     return res.json({ success: true, message: "All marked read" });
   } catch (err) {
@@ -551,7 +528,9 @@ exports.clearAllNotifications = async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     user.notifications = []; // Clear all
@@ -563,7 +542,9 @@ exports.clearAllNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error("Error clearing notifications:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -602,7 +583,7 @@ exports.reportIncident = async (req, res) => {
     });
 
     await incident.save();
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     console.log("🔥 IO INSTANCE:", !!io);
 
     // ⭐ Notify the user
@@ -611,7 +592,7 @@ exports.reportIncident = async (req, res) => {
       `Your incident "${title}" has been reported successfully.`,
       incident._id,
       "success",
-      io
+      io,
     );
 
     // ⭐ Notify all admins
@@ -623,7 +604,7 @@ exports.reportIncident = async (req, res) => {
         `A new incident "${title}" has been reported by ${req.user.firstName}.`,
         incident._id,
         "warning",
-        io
+        io,
       );
     }
 
@@ -631,7 +612,6 @@ exports.reportIncident = async (req, res) => {
       success: true,
       message: "Reported successfully",
     });
-
   } catch (error) {
     console.log(error);
     return res.status(500).json({
@@ -746,7 +726,6 @@ exports.submitFeedback = async (req, res) => {
       message: "Feedback submitted successfully",
       incident, // <-- return full updated incident
     });
-
   } catch (error) {
     console.error("❌ Feedback error:", error);
     res.status(500).json({
@@ -795,7 +774,6 @@ exports.getCurrentUser = async (req, res) => {
     });
   }
 };
-
 
 exports.viewIncident = async (req, res) => {
   try {

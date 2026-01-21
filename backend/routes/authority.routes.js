@@ -9,11 +9,7 @@ router.get('/view-incidents', protectRoute, authorityProtect, viewIncidents);
 router.get('/assigned-incidents', protectRoute, authorityProtect, getAssignedIncidents);
 
 // Incident management
-// router.put('/update-incident/:id', protectRoute, authorityProtect, updateIncident);
-// router.put('/mark-solved/:id', protectRoute, authorityProtect, markIncidentAsSolved);
-// router.post('/assign-incident', protectRoute, authorityProtect, assignIncident);
 router.put('/update-status/:id', protectRoute, authorityProtect, updateIncidentStatus);
-// router.post("/send-message/:id", protectRoute, sendMessageToReporter);
 
 
 // Dashboard

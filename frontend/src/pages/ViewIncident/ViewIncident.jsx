@@ -14,10 +14,19 @@ function ViewIncident() {
     authRole,
     authUser,
     updateStatus,
-    markComplete,
     assignIncident,
     getAllAuthorities,
   } = useAuthStore();
+
+  const fetchIncident = async () => {
+    setLoading(true);
+    const data = await viewIncident(id);
+    if (data) {
+      setIncident(data);
+      setNewStatus(data.status);
+    }
+    setLoading(false);
+  };
 
   const [incident, setIncident] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,22 +42,8 @@ function ViewIncident() {
 
   // Load incident
   useEffect(() => {
-    let mounted = true;
-
-    const fetchData = async () => {
-      setLoading(true);
-      const data = await viewIncident(id);
-      if (mounted && data) {
-        setIncident(data);
-        setNewStatus(data.status);
-      }
-      setLoading(false);
-    };
-
-    fetchData();
-
-    return () => (mounted = false);
-  }, [id, viewIncident]);
+    fetchIncident();
+  }, [id], viewIncident);
 
   // Scroll feedback to bottom automatically
   useEffect(() => {
@@ -63,6 +58,7 @@ function ViewIncident() {
   // -----------------------------
   // SUBMIT FEEDBACK
   // -----------------------------
+
   const handleSubmitFeedback = async () => {
     if (!feedbackMessage.trim()) {
       toast.error("Enter feedback");
@@ -70,18 +66,12 @@ function ViewIncident() {
     }
 
     setSubmitting(true);
-
     const res = await addFeedback(id, feedbackMessage);
 
     if (res?.success) {
       toast.success("Feedback submitted!");
-
-      setIncident((prev) => ({
-        ...prev,
-        feedback: res.feedback,
-      }));
-
       setFeedbackMessage("");
+      await fetchIncident();
     }
 
     setSubmitting(false);
@@ -94,21 +84,7 @@ function ViewIncident() {
     const success = await updateStatus(id, newStatus);
     if (success) {
       toast.success("Status updated!");
-      setIncident((prev) => ({
-        ...prev,
-        status: newStatus,
-      }));
-    }
-  };
-
-  // -----------------------------
-  // MARK COMPLETE (Authority)
-  // -----------------------------
-  const handleMarkComplete = async () => {
-    const success = await markComplete(id);
-    if (success) {
-      toast.success("Incident marked complete!");
-      setIncident((prev) => ({ ...prev, status: "resolved" }));
+      await fetchIncident();
     }
   };
 
@@ -129,14 +105,13 @@ function ViewIncident() {
     const success = await assignIncident(id, selectedAuthority);
     if (success) {
       toast.success("Incident assigned!");
-      navigate(0);
+      await fetchIncident();
     }
   };
 
   // ------------ UI RENDERING -------------
   const isAssignedToMe =
-    authRole === "authority" &&
-    incident?.assignedTo?._id === authUser?._id;
+    authRole === "authority" && incident?.assignedTo?._id === authUser?._id;
 
   if (loading) {
     return (
@@ -178,22 +153,30 @@ function ViewIncident() {
 
       {/* Details */}
       <div className="space-y-2 text-gray-700 mb-4">
-        <p><strong>Description:</strong> {incident.description}</p>
-        <p><strong>Location:</strong> {incident.location}</p>
-        <p><strong>Severity:</strong> {incident.severity}</p>
-        <p><strong>Status:</strong> {incident.status}</p>
+        <p>
+          <strong>Description:</strong> {incident.description}
+        </p>
+        <p>
+          <strong>Location:</strong> {incident.location}
+        </p>
+        <p>
+          <strong>Severity:</strong> {incident.severity}
+        </p>
+        <p>
+          <strong>Status:</strong> {incident.status}
+        </p>
 
         {incident.reportedBy && (
           <p>
-            <strong>Reported By:</strong>{" "}
-            {incident.reportedBy.firstName} {incident.reportedBy.lastName}
+            <strong>Reported By:</strong> {incident.reportedBy.firstName}{" "}
+            {incident.reportedBy.lastName}
           </p>
         )}
 
         {incident.assignedTo && (
           <p>
-            <strong>Assigned To:</strong>{" "}
-            {incident.assignedTo.firstName} {incident.assignedTo.lastName}
+            <strong>Assigned To:</strong> {incident.assignedTo.firstName}{" "}
+            {incident.assignedTo.lastName}
           </p>
         )}
       </div>
@@ -202,28 +185,6 @@ function ViewIncident() {
       {authRole === "admin" && (
         <div className="border-t pt-4 mt-4">
           <h2 className="text-lg font-semibold">Admin Controls</h2>
-
-          {/* Status */}
-          {/* <div className="mt-3 flex gap-3">
-            <select
-              className="select select-bordered"
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-            >
-              <option value="reported">Reported</option>
-              <option value="under review">Under Review</option>
-              <option value="in progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="dismissed">Dismissed</option>
-            </select>
-
-            <button
-              className="btn btn-primary"
-              onClick={handleStatusUpdate}
-            >
-              Update Status
-            </button>
-          </div> */}
 
           {/* Assign */}
           <div className="mt-4">
@@ -271,20 +232,14 @@ function ViewIncident() {
               <option value="reported">Reported</option>
               <option value="under review">Under Review</option>
               <option value="in progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+              <option value="dismissed">Dismissed</option>
             </select>
 
             <button className="btn btn-blue" onClick={handleStatusUpdate}>
               Update Status
             </button>
           </div>
-
-          {/* Mark Complete */}
-          {/* <button
-            className="btn btn-success mt-3"
-            onClick={handleMarkComplete}
-          >
-            Mark Complete
-          </button> */}
         </div>
       )}
 
@@ -298,10 +253,7 @@ function ViewIncident() {
         >
           {incident.feedback?.length > 0 ? (
             incident.feedback.map((f, i) => (
-              <div
-                key={i}
-                className="border rounded p-3 bg-gray-50 shadow-sm"
-              >
+              <div key={i} className="border rounded p-3 bg-gray-50 shadow-sm">
                 <p className="text-sm">{f.message}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {f.role} • {new Date(f.timestamp).toLocaleString()}

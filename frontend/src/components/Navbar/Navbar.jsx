@@ -75,7 +75,7 @@ const Navbar = () => {
             >
               <Users className="w-4 h-4 mr-1" />
               Manage Users
-            </Link>
+            </Link> 
             <Link
               to="/incidents"
               className="text-base font-medium text-gray-700 hover:text-primary"

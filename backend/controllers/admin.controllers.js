@@ -1,4 +1,3 @@
-const registeredUsersModel = require("../models/registeredUsers.model");
 const User = require("../models/user.model.js");
 const Incident = require("../models/incident.model.js");
 const bcrypt = require("bcryptjs");
@@ -11,14 +10,14 @@ exports.verify = async (req, res) => {
 
     console.log("Id: ", id, " Approval: ", approval);
 
-    if (!id || approval == null) {
+    if (!id || typeof approval !== "boolean") {
       return res.status(400).json({
         success: false,
         message: "User ID and approval status are required",
       });
     }
 
-    const user = await registeredUsersModel.findById(id);
+    const user = await User.findById(id);
 
     console.log(user);
 
@@ -37,28 +36,9 @@ exports.verify = async (req, res) => {
     }
 
     if (approval === true) {
-      // Approve user - create new user in main database
-      const name = `${user.firstName} ${user.lastName}`;
-      const newUser = new User({
-        name: name,
-        email: user.email,
-        address: user.address,
-        aadharCard: user.aadharCard,
-        profilePic: user.profilePic,
-        mobile: user.mobile,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        password: user.password,
-        role: "user", // Make sure this field exists in your User model
-      });
-
-      await newUser.save();
-
-      // Update status to approved instead of deleting
-      user.status = "approved";
-      await user.save();
-
-      return res.status(200).json({
+        user.status = "approved";
+        await user.save();
+        return res.status(200).json({
         success: true,
         message: "User approved successfully",
       });
@@ -84,9 +64,9 @@ exports.verify = async (req, res) => {
 exports.viewRegistrations = async (req, res) => {
   try {
     // Fetch all registered users
-    const registeredUsers = await registeredUsersModel.find();
+    const users = await User.find({status: "pending"});
 
-    if (!registeredUsers.length) {
+    if (!users.length) {
       return res.status(404).json({
         success: false,
         message: "No registered users found",
@@ -94,7 +74,7 @@ exports.viewRegistrations = async (req, res) => {
     }
 
     // Format the response to include necessary fields
-    const formattedUsers = registeredUsers.map((user) => ({
+    const formattedUsers = users.map((user) => ({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -102,7 +82,7 @@ exports.viewRegistrations = async (req, res) => {
       mobile: user.mobile,
       status: user.status, // Include the approval status
       aadharCard: user.aadharCard,
-      photo: user.photo,
+      profilePic: user.profilePic,
       createdAt: user.createdAt,
     }));
 
@@ -147,7 +127,7 @@ exports.removeUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: "user" }).select("-password");
+    const users = await User.find({ role: "user", status: "approved" }).select("-password");
 
     return res.status(200).json({
       success: true,
@@ -228,7 +208,7 @@ exports.getDashboardStats = async (req, res) => {
   try {
     // Get counts for different entities
     const totalUsers = await User.countDocuments({ role: "user" });
-    const pendingRegistrations = await registeredUsersModel.countDocuments({
+    const pendingRegistrations = await User.countDocuments({
       status: "pending",
     });
     const totalIncidents = await Incident.countDocuments();

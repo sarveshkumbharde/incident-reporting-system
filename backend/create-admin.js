@@ -34,7 +34,8 @@ async function createAdmin() {
       address: 'Admin Address',
       aadharCard: '123456789012',
       password: hashedPassword,
-      role: 'admin'
+      role: 'admin',
+      status: 'approved'
     });
 
     await adminUser.save();

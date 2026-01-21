@@ -47,6 +47,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
     reportedIncidents: [
       {
         type: mongoose.Schema.Types.ObjectId,

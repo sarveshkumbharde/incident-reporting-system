@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import IncidentCard from '../../components/IncidentCard/IncidentCard';
-import { useAuthStore } from '../../stores/authStore';
+import React, { useEffect } from "react";
+import IncidentCard from "../../components/IncidentCard/IncidentCard";
+import { useAuthStore } from "../../stores/authStore";
 
 const Incident = () => {
   const { viewIncidents, incidents, authUser, authRole } = useAuthStore();
@@ -10,15 +10,19 @@ const Incident = () => {
   }, [viewIncidents]);
 
   const refreshIncidents = async () => {
-  await viewIncidents();
-};
+    await viewIncidents();
+  };
 
   console.log("🔍 Incident Component - authRole:", authRole);
   console.log("🔍 Incident Component - incidents:", incidents);
 
   // Show loading state
   if (incidents === null) {
-    return <div className="text-lg text-center text-gray-700 mt-8">Loading incidents...</div>;
+    return (
+      <div className="text-lg text-center text-gray-700 mt-8">
+        Loading incidents...
+      </div>
+    );
   }
 
   // For authorities, show message if no assigned incidents
@@ -60,17 +64,12 @@ const Incident = () => {
           {authRole === "authority" && "Incidents Assigned to You"}
           {authRole === "user" && "Your Reported Incidents"}
         </h1>
-        <p className="text-gray-600">
-          Showing {incidents.length} incident(s)
-        </p>
+        <p className="text-gray-600">Showing {incidents.length} incident(s)</p>
       </div>
-      
+
       {incidents.map((incident, index) => (
         <div key={incident._id || index} className="mb-4">
-          <IncidentCard 
-            {...incident} 
-            refreshIncidents={refreshIncidents} 
-          />
+          <IncidentCard {...incident} refreshIncidents={refreshIncidents} />
         </div>
       ))}
     </div>

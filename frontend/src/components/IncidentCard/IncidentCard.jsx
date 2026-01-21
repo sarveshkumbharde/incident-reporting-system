@@ -17,15 +17,12 @@ const IncidentCard = ({
     authUser,
     authRole,
     updateStatus,
-    markComplete,
-    sendMessage,
     assignIncident,
     getAllAuthorities,
     addFeedback,
   } = useAuthStore();
 
   const [newStatus, setNewStatus] = useState(status);
-  const [message, setMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [authorities, setAuthorities] = useState([]);
   const [selectedAuthority, setSelectedAuthority] = useState("");
@@ -45,32 +42,6 @@ const IncidentCard = ({
   const handleStatusChange = async () => {
     setIsLoading(true);
     const success = await updateStatus(_id, newStatus);
-    if (success) {
-      // toast.success("Status updated successfully!");
-    }
-    setIsLoading(false);
-  };
-
-  // const handleMarkComplete = async () => {
-  //   setIsLoading(true);
-  //   const success = await markComplete(_id);
-  //   if (success) {
-  //     toast.success("Incident marked as complete!");
-  //   }
-  //   setIsLoading(false);
-  // };
-
-  const handleSendMessage = async () => {
-    if (!message.trim()) {
-      toast.error("Please enter a message");
-      return;
-    }
-    setIsLoading(true);
-    const success = await sendMessage(_id, message);
-    if (success) {
-      // toast.success("Message sent successfully!");
-      setMessage("");
-    }
     setIsLoading(false);
   };
 
@@ -82,7 +53,6 @@ const IncidentCard = ({
     setIsLoading(true);
     const success = await assignIncident(_id, selectedAuthority);
     if (success) {
-      // toast.success("Incident assigned successfully!");
       setShowAssignMenu(false);
       refreshIncidents()
     }
@@ -173,38 +143,6 @@ const IncidentCard = ({
           </button>
         </div>
       )}
-
-      {/* Mark Complete (Assigned Authority only) */}
-      {/* {authRole === "authority" && isAssignedToMe && (
-        <button
-          onClick={handleMarkComplete}
-          disabled={isLoading}
-          className="bg-green-500 text-white px-4 py-2 mt-2 rounded disabled:bg-green-300"
-        >
-          {isLoading ? "Processing..." : "Mark Complete"}
-        </button>
-      )} */}
-
-      {/* Send Message (Assigned Authority only) */}
-      {/* {authRole === "authority" && isAssignedToMe && (
-        <div className="mt-4">
-          <textarea
-            placeholder="Send a message to the user..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="border p-2 rounded w-full"
-            disabled={isLoading}
-            rows="3"
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={isLoading || !message.trim()}
-            className="bg-indigo-500 text-white px-4 py-2 mt-2 rounded disabled:bg-indigo-300"
-          >
-            {isLoading ? "Sending..." : "Send Message"}
-          </button>
-        </div>
-      )} */}
 
       {/* Assign (Admin only) */}
       {authRole === "admin" && !assignedTo && (

@@ -31,13 +31,10 @@ export const useAuthStore = create(
 
           if (!socket.connected) socket.connect();
 
-            socket.emit(
-              "register",
-              {
-                userId: res.data.user._id,
-                role: res.data.user.role,
-              },
-            );
+          socket.emit("register", {
+            userId: res.data.user._id,
+            role: res.data.user.role,
+          });
 
           await get().fetchNotifications(); // baseline
           get().listenToNotifications(); // realtime
@@ -153,7 +150,7 @@ export const useAuthStore = create(
           }
         } catch (error) {
           toast.error(
-            error.response?.data?.message || "Internal Server Error!"
+            error.response?.data?.message || "Internal Server Error!",
           );
         } finally {
           set({ isCheckingApproval: false });
@@ -166,7 +163,7 @@ export const useAuthStore = create(
           const res = await axiosInstance.post("/auth/report-incident", data);
           if (res.data.success) {
             toast.success(
-              "Incident reported successfully! We'll review it shortly."
+              "Incident reported successfully! We'll review it shortly.",
             );
             return true;
           } else {
@@ -175,7 +172,7 @@ export const useAuthStore = create(
           }
         } catch (error) {
           toast.error(
-            error.response?.data?.message || "Error in reporting! Try again."
+            error.response?.data?.message || "Error in reporting! Try again.",
           );
         } finally {
           set({ isReportingIncident: false });
@@ -225,39 +222,6 @@ export const useAuthStore = create(
         }
       },
 
-      updateIncident: async (data, incidentId) => {
-        set({ isUpdating: true });
-        try {
-          const res = await axiosInstance.put(
-            `/authority/update-incident/${incidentId}`,
-            data
-          );
-          if (res.data.success) {
-            toast.success("Updation successful!");
-          } else {
-            toast.error(res.data.message);
-          }
-        } catch (error) {
-          toast.error("Internal Server Error");
-        } finally {
-          set({ isUpdating: false });
-        }
-      },
-
-      // getNotifications: async () => {
-      //   try {
-      //     const res = await axiosInstance.get("/auth/notifications");
-      //     if (res.data.success) {
-      //       set({ notifications: res.data.notifications });
-      //       toast.success("Notifications fetched successfully!");
-      //     } else {
-      //       toast.error(res.data.message);
-      //     }
-      //   } catch (error) {
-      //     toast.error("Internal Server Error");
-      //   }
-      // },
-
       incident: {},
 
       // inside useAuthStore create() object
@@ -295,87 +259,6 @@ export const useAuthStore = create(
         }
       },
 
-      // getMessages: async () => {
-      //   try {
-      //     const res = await axiosInstance.get("/auth/messages");
-      //     console.log("📨 Messages response:", res.data);
-
-      //     if (res.data.success) {
-      //       return res.data.messages;
-      //     } else {
-      //       toast.error(res.data.message || "Failed to fetch messages");
-      //       return [];
-      //     }
-      //   } catch (error) {
-      //     console.error("❌ Error fetching messages:", error);
-      //     const errorMessage =
-      //       error.response?.data?.message || "Failed to fetch messages";
-      //     toast.error(errorMessage);
-      //     return [];
-      //   }
-      // },
-
-      report: {},
-      viewReport: async (id) => {
-        try {
-          const res = await axiosInstance.get(`/auth/view-report/${id}`);
-          if (res.data.success) {
-            set({ report: res.data.report });
-            toast.success(res.data.message);
-            return res.data.report; // Return the report for better handling
-          } else {
-            toast.error(res.data.message);
-            return null;
-          }
-        } catch (error) {
-          console.error("View report error:", error);
-          const errorMessage =
-            error.response?.data?.message || "Internal server error!";
-          toast.error(errorMessage);
-          return null;
-        }
-      },
-
-      markIncidentSolved: async (id) => {
-        try {
-          const res = await axiosInstance.put(`/authority/mark-solved/${id}`);
-          if (res.data.success) {
-            toast.success(res.data.message || "Incident Marked As Completed");
-          } else {
-            toast.error(res.data.message);
-          }
-        } catch (error) {
-          toast.error("Internal Server Error!");
-        }
-      },
-
-      updateProfile: async (data) => {
-        try {
-          const res = await axiosInstance.put("/auth/update-profile", data);
-          if (res.data.success) {
-            toast.success("Profile updated successfully!");
-            set({ authUser: { ...get().authUser, ...data } });
-          } else {
-            toast.error(res.data.message || "Failed to update profile");
-          }
-        } catch (error) {
-          toast.error("Internal Server Error");
-        }
-      },
-
-      changePassword: async (data) => {
-        try {
-          const res = await axiosInstance.put("/auth/change-password", data);
-          if (res.data.success) {
-            toast.success("Password changed successfully!");
-          } else {
-            toast.error(res.data.message || "Failed to change password");
-          }
-        } catch (error) {
-          toast.error("Internal Server Error");
-        }
-      },
-
       getUserIncidents: async () => {
         try {
           const res = await axiosInstance.get("/auth/user-incidents");
@@ -397,7 +280,7 @@ export const useAuthStore = create(
             `/authority/update-status/${id}`,
             {
               status,
-            }
+            },
           );
           if (res.data.success) {
             toast.success("Status updated successfully!");
@@ -409,24 +292,6 @@ export const useAuthStore = create(
         } catch (error) {
           const errorMessage =
             error.response?.data?.message || "Failed to update status";
-          toast.error(errorMessage);
-          return false;
-        }
-      },
-
-      markComplete: async (id) => {
-        try {
-          const res = await axiosInstance.put(`/auth/mark-complete/${id}`);
-          if (res.data.success) {
-            toast.success("Incident marked as complete!");
-            return true;
-          } else {
-            toast.error(res.data.message || "Failed to mark complete");
-            return false;
-          }
-        } catch (error) {
-          const errorMessage =
-            error.response?.data?.message || "Failed to mark complete";
           toast.error(errorMessage);
           return false;
         }
@@ -452,28 +317,6 @@ export const useAuthStore = create(
         }
       },
 
-      sendMessage: async (id, message) => {
-        try {
-          const res = await axiosInstance.post(
-            `/authority/send-message/${id}`,
-            {
-              message,
-            }
-          );
-          if (res.data.success) {
-            toast.success("Message sent successfully!");
-            return true;
-          } else {
-            toast.error(res.data.message || "Failed to send message");
-            return false;
-          }
-        } catch (error) {
-          const errorMessage =
-            error.response?.data?.message || "Failed to send message";
-          toast.error(errorMessage);
-          return false;
-        }
-      },
       getAllUsers: async () => {
         try {
           const res = await axiosInstance.get("/admin/all-users");
@@ -560,10 +403,6 @@ export const useAuthStore = create(
         }
       },
 
-      // =====================
-      // NOTIFICATIONS FUNCTIONS
-      // =====================
-
       // FETCH ALL NOTIFICATIONS
       fetchNotifications: async () => {
         try {
@@ -587,14 +426,14 @@ export const useAuthStore = create(
         try {
           const res = await axiosInstance.post(
             "/auth/mark-notification-read",
-            { notificationId: id } // FIX
+            { notificationId: id }, // FIX
           );
 
           if (res.data.success) {
             // remove notification from UI OR update it
             set((state) => ({
               notifications: state.notifications.map((n) =>
-                n._id === id ? { ...n, isRead: true } : n
+                n._id === id ? { ...n, isRead: true } : n,
               ),
             }));
           }
@@ -608,7 +447,7 @@ export const useAuthStore = create(
       markAllNotificationsRead: async () => {
         try {
           const res = await axiosInstance.post(
-            "/auth/mark-all-notifications-read"
+            "/auth/mark-all-notifications-read",
           );
           if (res.data.success) {
             set((state) => ({
@@ -643,6 +482,6 @@ export const useAuthStore = create(
         authUser: state.authUser,
         authRole: state.authRole,
       }),
-    }
-  )
+    },
+  ),
 );
