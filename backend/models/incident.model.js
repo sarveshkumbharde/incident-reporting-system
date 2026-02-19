@@ -59,18 +59,6 @@ const incidentSchema = new mongoose.Schema({
             default: Date.now
         }
     }],
-    resolutionDetails: {
-        resolvedAt: {
-            type: Date
-        },
-        resolvedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        },
-        resolutionNotes: {
-            type: String
-        }
-    }
 }, { 
     timestamps: true 
 });

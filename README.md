@@ -169,3 +169,21 @@ Authority Routes
 GET    /api/authority/incidents
 POST   /api/authority/update-status
 
+“This is a role-based Incident Reporting and Management System built using the MERN stack.
+The main goal was to design a transparent workflow where incidents can be reported, reviewed, assigned, and resolved with clear accountability.
+
+Users can report incidents and track their progress.
+Admins manage user verification and assign incidents to the appropriate authorities.
+Authorities handle the incident, update its status, and communicate through feedback.
+
+On the backend, I use MongoDB with two core models.
+The User model stores identity details, role, approval status, notifications, and references to reported or assigned incidents.
+The Incident model stores incident-specific data such as images, severity, current status, reporter, assigned authority, and a feedback thread.
+
+Authentication is handled using JWT with HTTP-only cookies, and role-based authorization is enforced through middleware, so each role can only access the actions relevant to them.
+
+For user experience, the frontend updates dynamically without page reloads by re-fetching incident data after every action, keeping the backend as the single source of truth.
+
+I also implemented real-time notifications using Socket.IO.
+If a user is online, they receive notifications instantly.
+If they’re offline, the notification is persisted and sent via email to ensure no updates are missed.”

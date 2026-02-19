@@ -579,7 +579,6 @@ exports.reportIncident = async (req, res) => {
       assignedTo: null,
       messages: [],
       feedback: [],
-      resolutionDetails: [],
     });
 
     await incident.save();

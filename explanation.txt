@@ -1,0 +1,35 @@
+This is the incident reporting and management system where incidents are reported, managed and tracked
+
+There are three roles in this system admin, user and authority
+
+User can report incidents; admin can approve new user or delete existing one, assign incidents to appropriate authorities; 
+authority update the status of incidents.
+
+Incident status and feedbacks are visible to all roles to maintain transparency
+
+For frontend I used React.js, for backend I used Node.js, express.js, for database I used mongodb.
+
+I created 2 models incident and user.
+
+When a user submit incident, the api request is sent to the backend with JWT token, which is verified by a middleware to 
+authenticate the user and check their role. After validation, backend creates new incident object, sets the initial status,
+and the links the incident to the user. The incident is stored in mongodb database and references are updated in user records.
+
+I used Socket.IO for real-time-notifications whenever incident is reported, assigned or updated. If the user is online 
+he can see notification immediately, if he is not, then he gets notified using email.
+
+
+OOP IMPLEMENTATION
+
+Polymorphism: Role-based access, Same interface but different behaviour depending on who the user is
+
+Abstraction: Routes don't know what middlewares and controller functions do.
+             Each role uses only the functionalities exposed to them, they don't know the implementation logic.
+
+Encapsulation: Databse models bundles different data fields 
+               Separate modules for controllers, middlewares, routes, configurations. Each module contains the business logic 
+               like JWT authorization, database configuration, how the incidents and users are managed are hidden and only
+               access through controlled functions.
+
+Composition: An Object is build using other objects like incident has reporter, assigned authority, feedbacks
+             User has notifications, reported incidents, assigned incidents

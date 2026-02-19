@@ -85,17 +85,7 @@ const userSchema = new mongoose.Schema(
           default: Date.now,
         },
       },
-    ],
-    authProviders: {
-      type: [String],
-      enum: ["local", "google"],
-      default: ["local"],
-    },
-
-    googleId: {
-      type: String,
-      default: null,
-    },
+    ]
   },
   {
     timestamps: true,
