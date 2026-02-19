@@ -335,8 +335,6 @@ exports.login = async (req, res) => {
         });
       }
     }
-
-   
   } catch (error) {
     console.error("Error in login: ", error);
     res.status(500).json({
@@ -348,7 +346,12 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    res.cookie("jwt", "", { maxAge: 0, httpOnly: true });
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+
     res.status(200).json({
       message: "Logout successful!",
       success: true,

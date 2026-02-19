@@ -27,7 +27,8 @@ const Navbar = () => {
 
 
   const handleLogout = async () => {
-    await logout();
+    const success = await logout();
+    if(success) navigate('/login');
   };
 
   const toggleMobileMenu = () => {

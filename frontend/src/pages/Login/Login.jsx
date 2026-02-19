@@ -2,14 +2,16 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  const { isLoggingIn, login } = useAuthStore();
+  const { isLoggingIn, login, authRole } = useAuthStore();
 
   const formValidator = () => {
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -32,7 +34,21 @@ const Login = () => {
 
     const isValid = formValidator();
     if (isValid) {
-      login(formData);
+      const success = await login(formData);
+      if(success){
+        if(authRole = 'admin'){
+          navigate('admin-dashboard');
+        }
+        else if(authRole = 'user'){
+          navigate('user-dashboard');
+        }
+        else{
+          navigate('authority-dashboard');
+        }
+      }
+      else{
+        navigate('/login');
+      }
     }
   };
 

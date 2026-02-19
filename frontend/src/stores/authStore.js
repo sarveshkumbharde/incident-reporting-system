@@ -61,16 +61,10 @@ export const useAuthStore = create(
               userId: loggedInUser._id,
               role: loggedInUser.role,
             });
-            const userRole = res.data.user.role;
-            if (userRole === "admin") {
-              window.location.href = "/admin-dashboard";
-            } else if (userRole === "authority") {
-              window.location.href = "/authority-dashboard";
-            } else if (userRole === "user") {
-              window.location.href = "/user-dashboard";
-            }
+            return true;
           } else {
             toast.error(res.data.message);
+            return false;
           }
         } catch (error) {
           const errorMessage = error.response?.data?.message || "Login failed!";
@@ -133,9 +127,10 @@ export const useAuthStore = create(
           set({ authUser: null, authRole: null });
 
           socket.disconnect();
-          window.location.href = "/login";
+          return true;
         } catch (error) {
           toast.error(error.response?.data?.message || "Logout failed!");
+          return false;
         }
       },
 
