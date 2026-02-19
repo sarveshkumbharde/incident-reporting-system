@@ -22,7 +22,7 @@ export const useAuthStore = create(
 
       initializeAuth: async () => {
         try {
-          const res = await axiosInstance.get("/auth/me");
+          const res = await axiosInstance.get("/api/auth/me");
 
           set({
             authUser: res.data.user,
@@ -46,7 +46,7 @@ export const useAuthStore = create(
       login: async (data) => {
         set({ isLoggingIn: true });
         try {
-          const res = await axiosInstance.post("/auth/login", data);
+          const res = await axiosInstance.post("/api/auth/login", data);
           if (res.data.success) {
             toast.success("Login successful!");
             set({
@@ -103,7 +103,7 @@ export const useAuthStore = create(
       register: async (data) => {
         set({ isSigningIn: true });
         try {
-          const res = await axiosInstance.post("/auth/signup", data);
+          const res = await axiosInstance.post("/api/auth/signup", data);
           if (res.data.success) {
             toast.success(res.data.message);
           } else {
@@ -120,7 +120,7 @@ export const useAuthStore = create(
 
       logout: async () => {
         try {
-          const res = await axiosInstance.post("/auth/logout");
+          const res = await axiosInstance.post("/api/auth/logout");
 
           set({
             authUser: null,
@@ -142,7 +142,7 @@ export const useAuthStore = create(
       checkApproval: async (data) => {
         set({ isCheckingApproval: true });
         try {
-          const res = await axiosInstance.post("/auth/check-approval", data);
+          const res = await axiosInstance.post("/api/auth/check-approval", data);
           if (res.data.success) {
             toast.success(res.data.message);
           } else {
@@ -160,7 +160,7 @@ export const useAuthStore = create(
       reportIncident: async (data) => {
         set({ isReportingIncident: true });
         try {
-          const res = await axiosInstance.post("/auth/report-incident", data);
+          const res = await axiosInstance.post("/api/auth/report-incident", data);
           if (res.data.success) {
             toast.success(
               "Incident reported successfully! We'll review it shortly.",
@@ -181,7 +181,7 @@ export const useAuthStore = create(
 
       findUser: async (id) => {
         try {
-          const res = await axiosInstance.get(`/authority/user/${id}`);
+          const res = await axiosInstance.get(`/api/authority/user/${id}`);
           return res.data.user;
         } catch (error) {
           return null;
@@ -190,7 +190,7 @@ export const useAuthStore = create(
 
       viewRegistrations: async () => {
         try {
-          const res = await axiosInstance.get("/admin/view-registrations");
+          const res = await axiosInstance.get("/api/admin/view-registrations");
           if (Array.isArray(res.data.users)) {
             set({ registrations: res.data.users });
           } else {
@@ -204,7 +204,7 @@ export const useAuthStore = create(
       acceptUser: async (data) => {
         set({ isAccepting: true });
         try {
-          const res = await axiosInstance.post(`/admin/verify/${data.userId}`, {
+          const res = await axiosInstance.post(`/api/admin/verify/${data.userId}`, {
             approval: data.approval,
           });
           if (res.data.success) {
@@ -239,7 +239,7 @@ export const useAuthStore = create(
       viewIncident: async (id) => {
         try {
           console.log("🔄 Fetching incident with ID:", id);
-          const res = await axiosInstance.get(`/auth/view-incident/${id}`);
+          const res = await axiosInstance.get(`/api/auth/view-incident/${id}`);
 
           if (res.data.success) {
             set({ incident: res.data.incident });
@@ -261,7 +261,7 @@ export const useAuthStore = create(
 
       getUserIncidents: async () => {
         try {
-          const res = await axiosInstance.get("/auth/user-incidents");
+          const res = await axiosInstance.get("/api/auth/user-incidents");
           if (res.data.success) {
             return res.data.incidents;
           } else {
@@ -277,7 +277,7 @@ export const useAuthStore = create(
       updateStatus: async (id, status) => {
         try {
           const res = await axiosInstance.put(
-            `/authority/update-status/${id}`,
+            `/api/authority/update-status/${id}`,
             {
               status,
             },
@@ -299,7 +299,7 @@ export const useAuthStore = create(
 
       assignIncident: async (id, authorityId) => {
         try {
-          const res = await axiosInstance.put(`/admin/assign/${id}`, {
+          const res = await axiosInstance.put(`/api/admin/assign/${id}`, {
             authorityId,
           });
           if (res.data.success) {
@@ -319,7 +319,7 @@ export const useAuthStore = create(
 
       getAllUsers: async () => {
         try {
-          const res = await axiosInstance.get("/admin/all-users");
+          const res = await axiosInstance.get("/api/admin/all-users");
           if (res.data.success) {
             return res.data.users;
           }
@@ -332,7 +332,7 @@ export const useAuthStore = create(
 
       removeUser: async (id) => {
         try {
-          const res = await axiosInstance.delete(`/admin/delete-user/${id}`);
+          const res = await axiosInstance.delete(`/api/admin/delete-user/${id}`);
           if (res.data.success) {
             toast.success("User removed successfully!");
             return true;
@@ -346,7 +346,7 @@ export const useAuthStore = create(
 
       getAllAuthorities: async () => {
         try {
-          const res = await axiosInstance.get(`/admin/all-authorities`);
+          const res = await axiosInstance.get(`/api/admin/all-authorities`);
           if (res.data.success) {
             return res.data.authorities || [];
           } else {
@@ -363,7 +363,7 @@ export const useAuthStore = create(
       // Add to your authStore methods
       addFeedback: async (incidentId, message) => {
         try {
-          const res = await axiosInstance.post("/auth/submit-feedback", {
+          const res = await axiosInstance.post("/api/auth/submit-feedback", {
             incidentId,
             feedback: message,
           });
@@ -392,7 +392,7 @@ export const useAuthStore = create(
 
       viewIncidents: async () => {
         try {
-          const res = await axiosInstance.get("/auth/view-incidents");
+          const res = await axiosInstance.get("/api/auth/view-incidents");
           if (Array.isArray(res.data.data)) {
             set({ incidents: res.data.data });
           } else {
@@ -406,7 +406,7 @@ export const useAuthStore = create(
       // FETCH ALL NOTIFICATIONS
       fetchNotifications: async () => {
         try {
-          const res = await axiosInstance.get("/auth/notifications");
+          const res = await axiosInstance.get("/api/auth/notifications");
 
           if (res.data.success) {
             const normalized = res.data.notifications.map((n) => ({
@@ -425,7 +425,7 @@ export const useAuthStore = create(
       markNotificationAsRead: async (id) => {
         try {
           const res = await axiosInstance.post(
-            "/auth/mark-notification-read",
+            "/api/auth/mark-notification-read",
             { notificationId: id }, // FIX
           );
 
@@ -447,7 +447,7 @@ export const useAuthStore = create(
       markAllNotificationsRead: async () => {
         try {
           const res = await axiosInstance.post(
-            "/auth/mark-all-notifications-read",
+            "/api/auth/mark-all-notifications-read",
           );
           if (res.data.success) {
             set((state) => ({
@@ -465,7 +465,7 @@ export const useAuthStore = create(
       // CLEAR ALL NOTIFICATIONS
       clearNotifications: async () => {
         try {
-          const res = await axiosInstance.delete("/auth/clear-notifications");
+          const res = await axiosInstance.delete("/api/auth/clear-notifications");
 
           if (res.data.success) {
             set({ notifications: [] });
