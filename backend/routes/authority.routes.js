@@ -1,7 +1,7 @@
 const protectRoute = require('../middleware/auth.middleware.js');
 const authorityProtect = require('../middleware/authority.middleware.js')
 const express = require('express');
-const {viewIncidents, getUser, sendMessageToReporter, updateIncidentStatus, getAssignedIncidents, getAuthorityDashboard, getFeedback} = require('../controllers/authority.controllers.js')
+const {viewIncidents, getUser, sendMessageToReporter, updateIncidentStatus, getAssignedIncidents, getAuthorityDashboard} = require('../controllers/authority.controllers.js')
 const router = express.Router();
 
 // View incidents
@@ -19,6 +19,6 @@ router.get('/dashboard', protectRoute, authorityProtect, getAuthorityDashboard);
 router.get('/user/:id', protectRoute, authorityProtect, getUser);
 
 // Feedback
-router.get('/feedback', protectRoute, authorityProtect, getFeedback);
+// router.get('/feedback', protectRoute, authorityProtect, getFeedback);
 
 module.exports = router;

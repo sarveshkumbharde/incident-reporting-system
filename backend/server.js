@@ -28,6 +28,8 @@ const io = new Server(server, {
   }
 });
 
+global.io = io;
+
 // make io available everywhere
 app.set("io", io);
 

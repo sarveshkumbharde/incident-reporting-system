@@ -6,7 +6,11 @@ require("dotenv").config();
 const incidentModel = require("../models/incident.model.js");
 const userModel = require("../models/user.model.js");
 const { uploadOnCloudinary } = require("../config/cloudinary.js");
-const { sendNotification } = require("../utils/sendNotification");
+const notificationQueue = require("../queues/notification.queue");
+const emailQueue = require("../queues/email.queue");
+const redis = require("../config/redis");
+const { getCache, setCache } = require("../utils/cache");
+const { invalidateIncidentCaches } = require("../utils/cacheInvalidation");
 
 exports.getProfile = async (req, res) => {
   try {
@@ -312,7 +316,7 @@ exports.login = async (req, res) => {
           message: "You're registration is rejected by admin.",
           success: false,
         });
-      } else if ((user.status = "approved")) {
+      } else if ((user.status == "approved")) {
         // Check password validity
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
@@ -588,26 +592,51 @@ exports.reportIncident = async (req, res) => {
     const io = req.app.get("io");
     console.log("🔥 IO INSTANCE:", !!io);
 
-    // ⭐ Notify the user
-    await sendNotification(
-      req.user._id,
-      `Your incident "${title}" has been reported successfully.`,
-      incident._id,
-      "success",
-      io,
-    );
+    // // ⭐ Notify the user
+    // await sendNotification(
+    //   req.user._id,
+    //   `Your incident "${title}" has been reported successfully.`,
+    //   incident._id,
+    //   "success",
+    //   io,
+    // );
 
-    // ⭐ Notify all admins
-    const admins = await User.find({ role: "admin" });
+    // // ⭐ Notify all admins
+    // const admins = await User.find({ role: "admin" });
+
+    // for (const admin of admins) {
+    //   await sendNotification(
+    //     admin._id,
+    //     `A new incident "${title}" has been reported by ${req.user.firstName}.`,
+    //     incident._id,
+    //     "warning",
+    //     io,
+    //   );
+    // }
+
+    // ❗ Cache invalidation
+    await redis.del("incidents_all");
+
+    // ✅ Notify user
+    await notificationQueue.add("incident_created_user", {
+      userId: req.user._id.toString(),
+      message: `Your incident "${title}" has been reported successfully.`,
+      incidentId: incident._id,
+      role: "user",
+      email: req.user.email,
+    });
+
+    // ✅ Notify all admins
+    const admins = await User.find({ role: "admin" }).select("_id email");
 
     for (const admin of admins) {
-      await sendNotification(
-        admin._id,
-        `A new incident "${title}" has been reported by ${req.user.firstName}.`,
-        incident._id,
-        "warning",
-        io,
-      );
+      await notificationQueue.add("incident_created_admin", {
+        userId: admin._id.toString(),
+        message: `New incident "${title}" reported by ${req.user.firstName}`,
+        incidentId: incident._id,
+        role: "admin",
+        email: admin.email,
+      });
     }
 
     return res.status(200).json({
@@ -627,8 +656,11 @@ exports.viewIncidents = async (req, res) => {
   try {
     console.log("🔍 viewIncidents called by user:", req.user?._id);
     console.log("🔍 User role:", req.user?.role);
-
     let incidents;
+    const cacheKey = `incidents_${req.user.role}_${req.user._id}`;
+
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
 
     // Filter incidents based on user role
     if (req.user.role === "authority") {
@@ -653,6 +685,8 @@ exports.viewIncidents = async (req, res) => {
         .populate("assignedTo", "firstName lastName email")
         .populate("feedback.submittedBy", "firstName lastName");
     }
+
+    await setCache(cacheKey, incidents, 60);
 
     console.log(`📊 Found ${incidents.length} incidents for ${req.user.role}`);
     console.log("📦 Sending response...");
@@ -717,6 +751,7 @@ exports.submitFeedback = async (req, res) => {
     });
 
     await incident.save();
+    await invalidateIncidentCaches(incidentId);
 
     // ✔️ Fetch updated + populated incident
     incident = await Incident.findById(incidentId)
@@ -781,6 +816,10 @@ exports.viewIncident = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const cacheKey = `incident_${id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
+
     // Add await and populate related fields
     const incident = await incidentModel
       .findById(id)
@@ -795,6 +834,8 @@ exports.viewIncident = async (req, res) => {
         message: "Incident not found",
       });
     }
+
+    await setCache(cacheKey, incident, 60);
 
     return res.status(200).json({
       success: true,

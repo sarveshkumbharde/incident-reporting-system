@@ -1,7 +1,9 @@
 const incidentModel = require('../models/incident.model')
 const User = require('../models/user.model')
 const mongoose = require('mongoose');
-const { sendNotification } = require("../utils/sendNotification");
+const notificationQueue = require("../queues/notification.queue");
+const emailQueue = require("../queues/email.queue");
+const redis = require("../config/redis");
 
 exports.getIncidentById = async (req, res) => {
     const incidentId = req.params.id;
@@ -129,6 +131,7 @@ exports.updateIncidentStatus = async (req, res) => {
         // Update status
         incident.status = status;
         await incident.save();
+        await invalidateIncidentCaches(incidentId);
 
         const io = req.app.get('io');
         // Add notification to reporter
@@ -223,34 +226,34 @@ exports.getAuthorityDashboard = async (req, res) => {
     }
 };
 
-exports.getFeedback = async (req, res) => {
-    try {
-        // Get all incidents with feedback
-        const incidentsWithFeedback = await incidentModel.find({
-            feedback: { $exists: true, $ne: null }
-        }).populate('reportedBy', 'firstName lastName');
+// exports.getFeedback = async (req, res) => {
+//     try {
+//         // Get all incidents with feedback
+//         const incidentsWithFeedback = await incidentModel.find({
+//             feedback: { $exists: true, $ne: null }
+//         }).populate('reportedBy', 'firstName lastName');
 
-        const feedbackData = incidentsWithFeedback.map(incident => ({
-            _id: incident._id,
-            incident: {
-                _id: incident._id,
-                title: incident.title
-            },
-            text: incident.feedback.text,
-            rating: incident.feedback.rating,
-            submittedAt: incident.feedback.submittedAt,
-            reporter: incident.reportedBy
-        }));
+//         const feedbackData = incidentsWithFeedback.map(incident => ({
+//             _id: incident._id,
+//             incident: {
+//                 _id: incident._id,
+//                 title: incident.title
+//             },
+//             text: incident.feedback.text,
+//             rating: incident.feedback.rating,
+//             submittedAt: incident.feedback.submittedAt,
+//             reporter: incident.reportedBy
+//         }));
 
-        return res.json({
-            success: true,
-            feedback: feedbackData
-        });
-    } catch (error) {
-        console.error("Error fetching feedback:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-};
+//         return res.json({
+//             success: true,
+//             feedback: feedbackData
+//         });
+//     } catch (error) {
+//         console.error("Error fetching feedback:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error"
+//         });
+//     }
+// };

@@ -1,7 +1,9 @@
 const User = require("../models/user.model.js");
 const Incident = require("../models/incident.model.js");
 const bcrypt = require("bcryptjs");
-const { sendNotification } = require("../utils/sendNotification");
+const notificationQueue = require("../queues/notification.queue");
+const emailQueue = require("../queues/email.queue");
+const redis = require("../config/redis");
 
 exports.verify = async (req, res) => {
   try {
@@ -36,9 +38,15 @@ exports.verify = async (req, res) => {
     }
 
     if (approval === true) {
-        user.status = "approved";
-        await user.save();
-        return res.status(200).json({
+      user.status = "approved";
+      await user.save();
+      await notificationQueue.add("user_verification", {
+        userId: user._id.toString(),
+        message: "Your account has been approved",
+        role: "user",
+        email: user.email,
+      });
+      return res.status(200).json({
         success: true,
         message: "User approved successfully",
       });
@@ -46,6 +54,12 @@ exports.verify = async (req, res) => {
       // Reject user - update status
       user.status = "rejected";
       await user.save();
+      await notificationQueue.add("user_verification", {
+        userId: user._id.toString(),
+        message: "Your account has been rejected",
+        role: "user",
+        email: user.email,
+      });
 
       return res.status(200).json({
         success: true,
@@ -64,7 +78,7 @@ exports.verify = async (req, res) => {
 exports.viewRegistrations = async (req, res) => {
   try {
     // Fetch all registered users
-    const users = await User.find({status: "pending"});
+    const users = await User.find({ status: "pending" });
 
     if (!users.length) {
       return res.status(404).json({
@@ -127,7 +141,9 @@ exports.removeUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: "user", status: "approved" }).select("-password");
+    const users = await User.find({ role: "user", status: "approved" }).select(
+      "-password",
+    );
 
     return res.status(200).json({
       success: true,
@@ -155,7 +171,7 @@ exports.deleteUser = async (req, res) => {
 exports.getAllAuthorities = async (req, res) => {
   try {
     const authorities = await User.find({ role: "authority" }).select(
-      "firstName lastName email _id"
+      "firstName lastName email _id",
     );
     res.json({ success: true, authorities: authorities });
   } catch (error) {
@@ -166,42 +182,45 @@ exports.getAllAuthorities = async (req, res) => {
 };
 
 exports.assignIncident = async (req, res) => {
-    try {
-        const incidentId = req.params.id
-        const { authorityId } = req.body;
+  try {
+    const incidentId = req.params.id;
+    const { authorityId } = req.body;
 
-        const incident = await Incident.findById(incidentId);
-        if (!incident)
-            return res.status(404).json({ success: false, message: "Incident not found" });
+    const incident = await Incident.findById(incidentId);
+    if (!incident)
+      return res
+        .status(404)
+        .json({ success: false, message: "Incident not found" });
 
-        incident.assignedTo = authorityId;
-        await incident.save();
+    incident.assignedTo = authorityId;
+    await incident.save();
 
-        const io = req.app.get('io');
-        // 🔥 Notify authority
-        await sendNotification(
-            authorityId,
-            `You have been assigned a new incident: "${incident.title}".`,
-            incidentId,
-            "warning",
-            io
-        );
+    const io = req.app.get("io");
 
-        // 🔥 Notify user who reported it
-        await sendNotification(
-            incident.reportedBy,
-            `Your incident "${incident.title}" has been assigned to an authority.`,
-            incidentId,
-            "info",
-            io
-        );
+    // ❗ Cache invalidation
+    await invalidateIncidentCaches(incidentId);
 
-        res.json({ success: true, message: "Incident assigned successfully" });
+    // ✅ Notify authority
+    await notificationQueue.add("incident_assigned_authority", {
+      userId: authorityId.toString(),
+      message: `You have been assigned incident "${incident.title}"`,
+      incidentId,
+      role: "authority",
+    });
 
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Internal server error" });
-    }
+    // ✅ Notify reporting user
+    await notificationQueue.add("incident_assigned_user", {
+      userId: incident.reportedBy.toString(),
+      message: `Your incident "${incident.title}" has been assigned`,
+      incidentId,
+      role: "user",
+    });
+
+    res.json({ success: true, message: "Incident assigned successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };
 
 exports.getDashboardStats = async (req, res) => {

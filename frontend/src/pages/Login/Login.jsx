@@ -36,10 +36,10 @@ const Login = () => {
     if (isValid) {
       const success = await login(formData);
       if(success){
-        if(authRole = 'admin'){
+        if(authRole == 'admin'){
           navigate('admin-dashboard');
         }
-        else if(authRole = 'user'){
+        else if(authRole == 'user'){
           navigate('user-dashboard');
         }
         else{
