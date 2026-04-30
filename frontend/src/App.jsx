@@ -88,7 +88,10 @@ function App() {
           element={authUser ? <AuthRedirect /> : <Signup />}
         />
 
-        <Route path="/incidents" element={<Incidents />} />
+        <Route
+          path="/incidents"
+          element={!authUser ? <AuthRedirect /> : <Incidents />}
+        />
         <Route path="/view-user/:id" element={<UserProfile />} />
 
         <Route

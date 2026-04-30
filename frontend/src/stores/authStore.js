@@ -48,27 +48,30 @@ export const useAuthStore = create(
         try {
           const res = await axiosInstance.post("/api/auth/login", data);
           if (res.data.success) {
+            const loggedInUser = res.data.user;
             toast.success("Login successful!");
             set({
-              authUser: res.data.user,
-              authRole: res.data.user.role || null,
+              authUser: loggedInUser,
+              authRole: loggedInUser.role || null,
             });
             if (!socket.connected) {
               socket.connect();
             }
-            const loggedInUser = res.data.user;
             socket.emit("register", {
               userId: loggedInUser._id,
               role: loggedInUser.role,
             });
-            return true;
+            await get().fetchNotifications();
+            get().listenToNotifications();
+            return loggedInUser;
           } else {
             toast.error(res.data.message);
-            return false;
+            return null;
           }
         } catch (error) {
           const errorMessage = error.response?.data?.message || "Login failed!";
           toast.error(errorMessage);
+          return null;
         } finally {
           set({ isLoggingIn: false });
         }
@@ -79,16 +82,26 @@ export const useAuthStore = create(
         if (hasSocketListener) return;
 
         socket.on("notification", (notification) => {
+          const incoming =
+            typeof notification === "string"
+              ? { text: notification }
+              : notification;
+
           const normalized = {
-            ...notification,
-            isRead: false,
+            ...incoming,
+            isRead: incoming.isRead ?? false,
           };
 
           set((state) => ({
-            notifications: [normalized, ...state.notifications],
+            notifications: normalized._id
+              ? [
+                  normalized,
+                  ...state.notifications.filter((n) => n._id !== normalized._id),
+                ]
+              : [normalized, ...state.notifications],
           }));
 
-          toast.success(notification.text);
+          toast.success(normalized.text);
         });
 
         set({ hasSocketListener: true });
@@ -116,17 +129,18 @@ export const useAuthStore = create(
         try {
           const res = await axiosInstance.post("/api/auth/logout");
 
+          socket.off("notification");
+          socket.disconnect();
+
+          toast.success("Logout successful");
+
           set({
             authUser: null,
             authRole: null,
             incidents: [],
+            notifications: [],
+            hasSocketListener: false,
           });
-
-          toast.success("Logout successful");
-
-          set({ authUser: null, authRole: null });
-
-          socket.disconnect();
           return true;
         } catch (error) {
           toast.error(error.response?.data?.message || "Logout failed!");
@@ -236,11 +250,17 @@ export const useAuthStore = create(
           console.log("🔄 Fetching incident with ID:", id);
           const res = await axiosInstance.get(`/api/auth/view-incident/${id}`);
 
-          if (res.data.success) {
-            set({ incident: res.data.incident });
+          const incident = res.data.success
+            ? res.data.incident
+            : res.data?._id
+              ? res.data
+              : null;
+
+          if (incident) {
+            set({ incident });
             console.log("✅ Incident fetched:", res.data.incident);
             toast.success("Incident fetched successfully!");
-            return res.data.incident; // Return the incident data
+            return incident; // Return the incident data
           } else {
             toast.error(res.data.message || "Failed to fetch incident");
             return null;
@@ -388,10 +408,16 @@ export const useAuthStore = create(
       viewIncidents: async () => {
         try {
           const res = await axiosInstance.get("/api/auth/view-incidents");
-          if (Array.isArray(res.data.data)) {
-            set({ incidents: res.data.data });
+          const incidents = Array.isArray(res.data?.data)
+            ? res.data.data
+            : Array.isArray(res.data)
+              ? res.data
+              : null;
+
+          if (incidents) {
+            set({ incidents });
           } else {
-            toast.error(res.data.message);
+            toast.error(res.data?.message || "Failed to fetch incidents.");
           }
         } catch (error) {
           toast.error("Failed to fetch incidents.");

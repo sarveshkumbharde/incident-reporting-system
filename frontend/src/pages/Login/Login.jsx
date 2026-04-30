@@ -4,6 +4,12 @@ import { useAuthStore } from "../../stores/authStore";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
+const DASHBOARD_PATH_BY_ROLE = {
+  admin: "/admin-dashboard",
+  authority: "/authority-dashboard",
+  user: "/user-dashboard",
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -11,7 +17,7 @@ const Login = () => {
     password: "",
   });
 
-  const { isLoggingIn, login, authRole } = useAuthStore();
+  const { isLoggingIn, login } = useAuthStore();
 
   const formValidator = () => {
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -34,20 +40,11 @@ const Login = () => {
 
     const isValid = formValidator();
     if (isValid) {
-      const success = await login(formData);
-      if(success){
-        if(authRole == 'admin'){
-          navigate('admin-dashboard');
-        }
-        else if(authRole == 'user'){
-          navigate('user-dashboard');
-        }
-        else{
-          navigate('authority-dashboard');
-        }
-      }
-      else{
-        navigate('/login');
+      const loggedInUser = await login(formData);
+      if (loggedInUser) {
+        navigate(DASHBOARD_PATH_BY_ROLE[loggedInUser.role] || "/", {
+          replace: true,
+        });
       }
     }
   };

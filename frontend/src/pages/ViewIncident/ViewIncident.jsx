@@ -43,7 +43,7 @@ function ViewIncident() {
   // Load incident
   useEffect(() => {
     fetchIncident();
-  }, [id], viewIncident);
+  }, [id]);
 
   // Scroll feedback to bottom automatically
   useEffect(() => {

@@ -17,7 +17,7 @@ router.delete('/delete-user/:id', protectRoute, adminProtect, deleteUser);
 // Dashboard and statistics
 router.get('/dashboard-stats', protectRoute, adminProtect, getDashboardStats);
 router.get('/view-incidents', protectRoute, adminProtect, viewIncidents);
-router.put("/assign/:id", protectRoute, assignIncident);
+router.put("/assign/:id", protectRoute, adminProtect, assignIncident);
 
 console.log("✅ Admin routes file loaded!");
 

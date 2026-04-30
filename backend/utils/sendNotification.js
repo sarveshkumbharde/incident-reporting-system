@@ -1,72 +1,95 @@
-// const User = require("../models/user.model.js");
-
-// exports.sendNotification = async (userId, text, incidentId, type = "info") => {
-//   try {
-//     const user = await User.findById(userId);
-//     if (!user) return;
-
-//     user.notifications.push({
-//       text,
-//       incidentId,
-//       type,
-//       isRead: false, // IMPORTANT
-//       createdAt: new Date(),
-//     });
-
-//     await user.save();
-//   } catch (err) {
-//     console.error("Notification error:", err);
-//   }
-// };
-
-
 const User = require("../models/user.model.js");
-const { getUserSocket } = require("../sockets");
-const { sendMail } = require("./mailer");
 
 exports.sendNotification = async (
   userId,
   message,
   incidentId,
   type = "info",
-  io
+  io,
 ) => {
-  const user = await User.findById(userId);
-  if (!user) return;
+  try {
+    console.log("[Notifications] Delivering notification", {
+      userId: userId?.toString(),
+      incidentId: incidentId?.toString?.() || incidentId || null,
+      type,
+    });
 
-  const notification = {
-    text: message,
-    incidentId,
-    type,
-    isRead: false,
-    createdAt: new Date(),
-  };
+    const user = await User.findById(userId);
+    if (!user) {
+      console.warn("[Notifications] Target user not found", {
+        userId: userId?.toString(),
+      });
+      return null;
+    }
 
-  user.notifications.unshift(notification);
-  if (user.notifications.length > 50) {
-  user.notifications.pop(); // drop oldest
-}
-  await user.save();
+    const notification = {
+      text: message,
+      ...(incidentId ? { incidentId } : {}),
+      type,
+      isRead: false,
+      createdAt: new Date(),
+    };
 
-  // 🔴 REAL-TIME
-  const socketId = getUserSocket(userId);
-  console.log("📡 socketId for", userId, "=", socketId);
+    user.notifications.unshift(notification);
+    if (user.notifications.length > 50) {
+      user.notifications.pop();
+    }
 
-  if (socketId && io) {
-    io.to(socketId).emit("notification", notification);
-    return;
+    await user.save();
+
+    const savedNotification = user.notifications[0]?.toObject
+      ? user.notifications[0].toObject()
+      : user.notifications[0];
+
+    console.log("[Notifications] Notification persisted", {
+      userId: user._id.toString(),
+      notificationId: savedNotification?._id?.toString() || null,
+    });
+
+    const room = userId.toString();
+    const activeRoom = io?.sockets?.adapter?.rooms?.get(room);
+
+    if (activeRoom?.size > 0) {
+      io.to(room).emit("notification", savedNotification);
+      console.log("[Notifications] Realtime notification emitted", {
+        userId: user._id.toString(),
+        room,
+        sockets: activeRoom.size,
+        notificationId: savedNotification?._id?.toString() || null,
+      });
+      return savedNotification;
+    }
+
+    console.log("[Notifications] User offline; sending email fallback", {
+      userId: user._id.toString(),
+      email: user.email,
+      notificationId: savedNotification?._id?.toString() || null,
+    });
+
+    try {
+      const emailQueue = require("../queues/email.queue.js");
+      await emailQueue.add("sendEmail", {
+        to: user.email,
+        subject: "New Notification",
+        html: `
+          <p>Hello ${user.firstName},</p>
+          <p>${message}</p>
+          ${incidentId ? `<p><b>Incident ID:</b> ${incidentId}</p>` : ""}
+          <hr />
+          <small>Incident Reporting System</small>
+        `,
+      });
+      console.log("[Notifications] Email fallback enqueued", {
+        userId: user._id.toString(),
+        email: user.email,
+      });
+    } catch (error) {
+      console.error("[Notifications] Email fallback failed:", error.message);
+    }
+
+    return savedNotification;
+  } catch (error) {
+    console.error("[Notifications] Delivery failed:", error);
+    return null;
   }
-
-  // 🟡 OFFLINE → EMAIL
-  await sendMail({
-    to: user.email,
-    subject: "New Notification",
-    html: `
-      <p>Hello ${user.firstName},</p>
-      <p>${message}</p>
-      <p><b>Incident ID:</b> ${incidentId}</p>
-      <hr />
-      <small>Incident Reporting System</small>
-    `,
-  });
 };

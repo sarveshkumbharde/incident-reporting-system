@@ -25,8 +25,14 @@ const Incident = () => {
     );
   }
 
+  // Filter incidents for authority to avoid empty card wrappers
+  const filteredIncidents =
+    authRole === "authority"
+      ? incidents.filter((inc) => inc.assignedTo?._id === authUser?._id)
+      : incidents;
+
   // For authorities, show message if no assigned incidents
-  if (authRole === "authority" && incidents.length === 0) {
+  if (authRole === "authority" && filteredIncidents.length === 0) {
     return (
       <div className="text-lg text-center text-gray-700 mt-8">
         No incidents assigned to you yet!
@@ -35,7 +41,7 @@ const Incident = () => {
   }
 
   // For users, show message if no incidents reported
-  if (authRole === "user" && incidents.length === 0) {
+  if (authRole === "user" && filteredIncidents.length === 0) {
     return (
       <div className="text-lg text-center text-gray-700 mt-8">
         You haven't reported any incidents yet!
@@ -44,7 +50,7 @@ const Incident = () => {
   }
 
   // For admin, show message if no incidents at all
-  if (authRole === "admin" && incidents.length === 0) {
+  if (authRole === "admin" && filteredIncidents.length === 0) {
     return (
       <div className="text-lg text-center text-gray-700 mt-8">
         No incidents reported in the system yet!
@@ -52,7 +58,7 @@ const Incident = () => {
     );
   }
 
-  if (!incidents || incidents.length === 0) {
+  if (!filteredIncidents || filteredIncidents.length === 0) {
     return <div className="text-lg text-red-700">No incidents found!</div>;
   }
 
@@ -64,10 +70,12 @@ const Incident = () => {
           {authRole === "authority" && "Incidents Assigned to You"}
           {authRole === "user" && "Your Reported Incidents"}
         </h1>
-        <p className="text-gray-600">Showing {incidents.length} incident(s)</p>
+        <p className="text-gray-600">
+          Showing {filteredIncidents.length} incident(s)
+        </p>
       </div>
 
-      {incidents.map((incident, index) => (
+      {filteredIncidents.map((incident, index) => (
         <div key={incident._id || index} className="mb-4">
           <IncidentCard {...incident} refreshIncidents={refreshIncidents} />
         </div>

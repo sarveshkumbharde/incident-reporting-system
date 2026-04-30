@@ -6,11 +6,9 @@ require("dotenv").config();
 const incidentModel = require("../models/incident.model.js");
 const userModel = require("../models/user.model.js");
 const { uploadOnCloudinary } = require("../config/cloudinary.js");
-const notificationQueue = require("../queues/notification.queue");
-const emailQueue = require("../queues/email.queue");
-const redis = require("../config/redis");
 const { getCache, setCache } = require("../utils/cache");
 const { invalidateIncidentCaches } = require("../utils/cacheInvalidation");
+const { enqueueNotification } = require("../queues/notification.queue");
 
 exports.getProfile = async (req, res) => {
   try {
@@ -589,8 +587,6 @@ exports.reportIncident = async (req, res) => {
     });
 
     await incident.save();
-    const io = req.app.get("io");
-    console.log("🔥 IO INSTANCE:", !!io);
 
     // // ⭐ Notify the user
     // await sendNotification(
@@ -615,27 +611,30 @@ exports.reportIncident = async (req, res) => {
     // }
 
     // ❗ Cache invalidation
-    await redis.del("incidents_all");
+    await invalidateIncidentCaches(incident._id);
 
     // ✅ Notify user
-    await notificationQueue.add("incident_created_user", {
-      userId: req.user._id.toString(),
+    await enqueueNotification({
+      name: "incident-created-reporter",
+      userId: req.user._id,
       message: `Your incident "${title}" has been reported successfully.`,
       incidentId: incident._id,
-      role: "user",
-      email: req.user.email,
+      type: "success",
     });
 
     // ✅ Notify all admins
-    const admins = await User.find({ role: "admin" }).select("_id email");
+    const admins = await User.find({
+      role: "admin",
+      status: "approved",
+    }).select("_id");
 
     for (const admin of admins) {
-      await notificationQueue.add("incident_created_admin", {
-        userId: admin._id.toString(),
+      await enqueueNotification({
+        name: "incident-created-admin",
+        userId: admin._id,
         message: `New incident "${title}" reported by ${req.user.firstName}`,
         incidentId: incident._id,
-        role: "admin",
-        email: admin.email,
+        type: "warning",
       });
     }
 
@@ -667,35 +666,34 @@ exports.viewIncidents = async (req, res) => {
       // Authority can only see incidents assigned to them
       incidents = await incidentModel
         .find({ assignedTo: req.user._id })
-        .populate("reportedBy", "firstName lastName email")
-        .populate("assignedTo", "firstName lastName email")
-        .populate("feedback.submittedBy", "firstName lastName");
+        .select("_id title image status reportedBy")
+        .populate("reportedBy", "firstName lastName");
     } else if (req.user.role === "user") {
       // Users can only see incidents they reported
       incidents = await incidentModel
         .find({ reportedBy: req.user._id })
-        .populate("reportedBy", "firstName lastName email")
-        .populate("assignedTo", "firstName lastName email")
-        .populate("feedback.submittedBy", "firstName lastName");
+        .select("_id title image status reportedBy")
+        .populate("reportedBy", "firstName lastName");
     } else {
       // Admin can see all incidents
       incidents = await incidentModel
         .find({})
-        .populate("reportedBy", "firstName lastName email")
-        .populate("assignedTo", "firstName lastName email")
-        .populate("feedback.submittedBy", "firstName lastName");
+        .select("_id title image status reportedBy")
+        .populate("reportedBy", "firstName lastName");
     }
 
-    await setCache(cacheKey, incidents, 60);
+    const response = {
+      message: "Incidents fetched!",
+      data: incidents,
+      success: true,
+    };
+
+    await setCache(cacheKey, response, 60);
 
     console.log(`📊 Found ${incidents.length} incidents for ${req.user.role}`);
     console.log("📦 Sending response...");
 
-    return res.json({
-      message: "Incidents fetched!",
-      data: incidents,
-      success: true,
-    });
+    return res.json(response);
   } catch (error) {
     console.log("❌ Error fetching incidents", error);
     return res.status(500).json({
@@ -757,6 +755,36 @@ exports.submitFeedback = async (req, res) => {
     incident = await Incident.findById(incidentId)
       .populate("reportedBy", "firstName lastName email")
       .populate("assignedTo", "firstName lastName email");
+
+    const recipientIds = new Set();
+
+    if (incident.reportedBy?._id) {
+      recipientIds.add(incident.reportedBy._id.toString());
+    }
+
+    if (incident.assignedTo?._id) {
+      recipientIds.add(incident.assignedTo._id.toString());
+    }
+
+    const admins = await User.find({
+      role: "admin",
+      status: "approved",
+    }).select("_id");
+
+    admins.forEach((admin) => recipientIds.add(admin._id.toString()));
+    recipientIds.delete(userId.toString());
+
+    await Promise.all(
+      [...recipientIds].map((recipientId) =>
+        enqueueNotification({
+          name: "incident-feedback-added",
+          userId: recipientId,
+          message: `${req.user.firstName} added feedback on incident "${incident.title}"`,
+          incidentId: incident._id,
+          type: "info",
+        }),
+      ),
+    );
 
     return res.json({
       success: true,
@@ -835,13 +863,15 @@ exports.viewIncident = async (req, res) => {
       });
     }
 
-    await setCache(cacheKey, incident, 60);
-
-    return res.status(200).json({
+    const response = {
       success: true,
       incident: incident,
       message: "Incident fetched successfully",
-    });
+    };
+
+    await setCache(cacheKey, response, 60);
+
+    return res.status(200).json(response);
   } catch (error) {
     console.log("Error in viewIncident:", error);
     return res.status(500).json({

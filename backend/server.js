@@ -33,6 +33,12 @@ global.io = io;
 // make io available everywhere
 app.set("io", io);
 
+require("./workers/notification.worker.js");
+console.log("[BullMQ][Notifications] Worker registered with server process");
+
+require("./workers/email.worker.js");
+console.log("[BullMQ][Email] Worker registered with server process");
+
  const {socketHandler} = require('./sockets/index.js');
  socketHandler(io);
 

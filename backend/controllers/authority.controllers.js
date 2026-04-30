@@ -1,9 +1,8 @@
 const incidentModel = require('../models/incident.model')
 const User = require('../models/user.model')
 const mongoose = require('mongoose');
-const notificationQueue = require("../queues/notification.queue");
-const emailQueue = require("../queues/email.queue");
-const redis = require("../config/redis");
+const { enqueueNotification } = require("../queues/notification.queue");
+const { invalidateIncidentCaches } = require("../utils/cacheInvalidation");
 
 exports.getIncidentById = async (req, res) => {
     const incidentId = req.params.id;
@@ -133,15 +132,14 @@ exports.updateIncidentStatus = async (req, res) => {
         await incident.save();
         await invalidateIncidentCaches(incidentId);
 
-        const io = req.app.get('io');
         // Add notification to reporter
-        await sendNotification(
-            incident.reportedBy,
-            `Your incident "${incident.title}" is now "${status}".`,
+        await enqueueNotification({
+            name: "incident-status-updated",
+            userId: incident.reportedBy,
+            message: `Your incident "${incident.title}" is now "${status}".`,
             incidentId,
-            "info",
-            io
-        );
+            type: "info",
+        });
 
         return res.json({
             success: true,

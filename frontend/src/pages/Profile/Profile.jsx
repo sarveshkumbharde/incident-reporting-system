@@ -12,8 +12,7 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
-import { axiosInstance } from "../../stores/axios";
-import { API_BASE_URL } from "../../api.js";
+import { API_URL } from "../../api.js";
 
 const Profile = () => {
   const { authUser } = useAuthStore();
@@ -28,7 +27,7 @@ const Profile = () => {
       try {
         setLoading(true);
         // Fetch complete user data with populated incidents
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        const response = await fetch(`${API_URL}/auth/profile`, {
           credentials: "include",
         });
 

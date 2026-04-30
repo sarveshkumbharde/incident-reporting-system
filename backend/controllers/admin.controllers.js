@@ -1,9 +1,8 @@
 const User = require("../models/user.model.js");
 const Incident = require("../models/incident.model.js");
 const bcrypt = require("bcryptjs");
-const notificationQueue = require("../queues/notification.queue");
-const emailQueue = require("../queues/email.queue");
-const redis = require("../config/redis");
+const { enqueueNotification } = require("../queues/notification.queue");
+const { invalidateIncidentCaches } = require("../utils/cacheInvalidation");
 
 exports.verify = async (req, res) => {
   try {
@@ -40,11 +39,11 @@ exports.verify = async (req, res) => {
     if (approval === true) {
       user.status = "approved";
       await user.save();
-      await notificationQueue.add("user_verification", {
-        userId: user._id.toString(),
+      await enqueueNotification({
+        name: "user-verification-approved",
+        userId: user._id,
         message: "Your account has been approved",
-        role: "user",
-        email: user.email,
+        type: "success",
       });
       return res.status(200).json({
         success: true,
@@ -54,11 +53,11 @@ exports.verify = async (req, res) => {
       // Reject user - update status
       user.status = "rejected";
       await user.save();
-      await notificationQueue.add("user_verification", {
-        userId: user._id.toString(),
+      await enqueueNotification({
+        name: "user-verification-rejected",
+        userId: user._id,
         message: "Your account has been rejected",
-        role: "user",
-        email: user.email,
+        type: "error",
       });
 
       return res.status(200).json({
@@ -170,7 +169,10 @@ exports.deleteUser = async (req, res) => {
 
 exports.getAllAuthorities = async (req, res) => {
   try {
-    const authorities = await User.find({ role: "authority" }).select(
+    const authorities = await User.find({
+      role: "authority",
+      status: "approved",
+    }).select(
       "firstName lastName email _id",
     );
     res.json({ success: true, authorities: authorities });
@@ -192,28 +194,41 @@ exports.assignIncident = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Incident not found" });
 
+    const authority = await User.findOne({
+      _id: authorityId,
+      role: "authority",
+      status: "approved",
+    }).select("firstName lastName");
+
+    if (!authority) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select a valid approved authority",
+      });
+    }
+
     incident.assignedTo = authorityId;
     await incident.save();
-
-    const io = req.app.get("io");
 
     // ❗ Cache invalidation
     await invalidateIncidentCaches(incidentId);
 
     // ✅ Notify authority
-    await notificationQueue.add("incident_assigned_authority", {
-      userId: authorityId.toString(),
+    await enqueueNotification({
+      name: "incident-assigned-authority",
+      userId: authority._id,
       message: `You have been assigned incident "${incident.title}"`,
-      incidentId,
-      role: "authority",
+      incidentId: incident._id,
+      type: "info",
     });
 
     // ✅ Notify reporting user
-    await notificationQueue.add("incident_assigned_user", {
-      userId: incident.reportedBy.toString(),
-      message: `Your incident "${incident.title}" has been assigned`,
-      incidentId,
-      role: "user",
+    await enqueueNotification({
+      name: "incident-assigned-reporter",
+      userId: incident.reportedBy,
+      message: `Your incident "${incident.title}" has been assigned to ${authority.firstName} ${authority.lastName}`,
+      incidentId: incident._id,
+      type: "success",
     });
 
     res.json({ success: true, message: "Incident assigned successfully" });

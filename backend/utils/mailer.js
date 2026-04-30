@@ -1,24 +1,26 @@
 const nodemailer = require("nodemailer");
-const emailQueue = require("../queues/email.queue");
+
+const mailUser = process.env.MAIL_USER || process.env.EMAIL_USER;
+const mailPass = process.env.MAIL_PASS || process.env.EMAIL_PASS;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
+    user: mailUser,
+    pass: mailPass,
   },
 });
 
-const sendMail = async ({ to, subject, html }) => {
-  try {
-    await emailQueue.add("sendEmail", {
-      to: user.email,
-      subject: "Incident Update",
-      text: "Your incident status updated",
-    });
-  } catch (error) {
-    console.error("❌ Email task added to queue:", error.message);
-  }
+const sendMail = async ({ to, subject, html, text }) => {
+  if (!to) return;
+
+  await transporter.sendMail({
+    from: mailUser,
+    to,
+    subject,
+    html,
+    text,
+  });
 };
 
-module.exports = { sendMail };
+module.exports = { sendMail, transporter };

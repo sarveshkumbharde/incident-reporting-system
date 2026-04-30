@@ -1,16 +1,17 @@
 const { Worker } = require("bullmq");
 const redis = require("../config/redis");
-const transporter = require("../utils/mailer"); // your existing mail config
+const { transporter } = require("../utils/mailer");
 
 const worker = new Worker(
   "emailQueue",
   async (job) => {
-    const { to, subject, text } = job.data;
+    const { to, subject, text, html } = job.data;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.MAIL_USER,
       to,
       subject,
+      html,
       text,
     });
   },

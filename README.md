@@ -1,189 +1,214 @@
-🚀 Features
-👤 User Features
+# 🚨 Incident Reporting System
 
-Sign up & Login with JWT Auth
+A comprehensive, role-based Incident Reporting and Management System built using the MERN stack. The main goal is to provide a transparent workflow where incidents can be reported, reviewed, assigned, and resolved with clear accountability. 
 
-Report incidents with image upload (via Cloudinary)
+Users can report incidents and track their progress. Admins manage user verification and assign incidents to appropriate authorities. Authorities handle the assigned incidents, update their status, and communicate through an embedded feedback thread.
 
-View their reported incidents
+## 🌟 Key Features
 
-Submit feedback on assigned/resolved incidents
+### 👤 User Features
+- **Authentication**: Sign up & Login with JWT Auth (HTTP-only cookies).
+- **Report Incidents**: Submit incidents with an image upload, severity level, location, and description.
+- **Track Incidents**: View a dashboard of their reported incidents and current statuses.
+- **Feedback**: Submit feedback on incidents (useful for communication with authorities).
+- **Notifications**: Receive real-time updates when an incident is assigned, status is changed, or feedback is given.
+- **Profile Management**: Edit profile details, change password, and upload a profile picture.
 
-Receive notifications when:
+### 🛡️ Authority Features
+- **Dashboard**: View incidents assigned to them by the Admin.
+- **Status Updates**: Change the incident status (`under review`, `in progress`, `resolved`, `dismissed`).
+- **Communication**: Send and reply to feedback on specific incidents.
+- **Notifications**: Get real-time or offline email notifications for new assignments.
 
-Incident is assigned
+### 🔑 Admin Features
+- **User Management**: Approve, reject, or verify newly registered users. Remove users if necessary.
+- **Global Overview**: View all reported incidents across the system.
+- **Delegation**: Assign incidents to specific authorities for resolution.
+- **Monitoring**: Receive notifications when a new incident is reported. Monitor system activity.
 
-Status is updated
+## 🛠️ Tech Stack
 
-Edit profile & change password
+### Frontend
+- **React.js (Vite)**: Lightning-fast development environment.
+- **Zustand**: Global state management.
+- **Tailwind CSS & DaisyUI**: Utility-first CSS framework with pre-designed components.
+- **React Router DOM**: Client-side routing.
+- **Socket.io-client**: For real-time notifications.
+- **Chart.js & React-Chartjs-2**: For analytics and dashboards.
+- **Axios**: HTTP client.
+- **Framer Motion**: Animations.
 
-🛡️ Authority Features
+### Backend
+- **Node.js & Express.js**: Server environment and web framework.
+- **MongoDB & Mongoose**: NoSQL database and object data modeling.
+- **JWT**: Authentication using secure HTTP-only cookies.
+- **Socket.IO**: WebSockets for instant, real-time push notifications.
+- **BullMQ & Redis**: Background job processing queue (used for resilient notification delivery).
+- **Nodemailer**: Email delivery for offline users.
+- **Cloudinary & Multer**: Cloud-based storage and middleware for processing multipart/form-data (profile pics, Aadhaar cards, incident images).
 
-View only assigned incidents
+## 🏗️ Architecture & Database Schema
 
-Update incident status
+The system uses an optimized NoSQL schema utilizing MongoDB subdocuments. 
+- **Notification** and **Feedback** are embedded directly into their parent documents (`User` and `Incident`) to reduce database lookups and maintain atomicity.
 
-Send feedback
+```mermaid
+classDiagram
+    class User {
+        +String firstName
+        +String lastName
+        +String email
+        +String mobile
+        +String password
+        +String address
+        +String aadharCard
+        +String role
+        +String profilePic
+        +String status
+        +ObjectId[] reportedIncidents
+        +ObjectId[] assignedIncidents
+        +Notification[] notifications
+    }
 
-Receive notifications when assigned incidents
+    class Notification {
+        <<Embedded in User>>
+        +String text
+        +ObjectId incidentId
+        +String type
+        +Boolean isRead
+        +Date createdAt
+    }
 
-🔑 Admin Features
+    class Incident {
+        +String title
+        +String description
+        +String location
+        +ObjectId reportedBy
+        +String image
+        +String severity
+        +String status
+        +ObjectId assignedTo
+        +Feedback[] feedback
+    }
 
-Manage all users (verify, approve, reject)
+    class Feedback {
+        <<Embedded in Incident>>
+        +String message
+        +ObjectId submittedBy
+        +String role
+        +Date timestamp
+    }
 
-View all incidents
+    User "1" -- "*" Incident : reportedIncidents / reportedBy
+    User "1" -- "*" Incident : assignedIncidents / assignedTo
+    User *-- "*" Notification : contains
+    Incident *-- "*" Feedback : contains
+```
 
-Assign incidents to authorities
+## 📬 Notifications System (Real-time & Offline)
 
-Receive notifications when new incident is reported
+The notification system uses a hybrid approach to guarantee delivery:
+1. **Real-time**: When an event occurs (e.g., status update), the backend emits a Socket.IO event. If the user is connected, they receive the notification instantly in their UI.
+2. **Background Processing (BullMQ + Redis)**: Notification tasks are added to a BullMQ queue. A worker processes these jobs asynchronously.
+3. **Email Fallback**: If the user is offline (determined via active socket connections), the worker falls back to sending an email via Nodemailer. This ensures critical updates are never missed.
 
-Remove users
+## 📂 Folder Structure
 
-Monitor system activity
-
-📬 Notifications
-
-Stored per-user
-
-Supports Mark as Read, Mark All Read, Clear All
-
-Bell icon shows unread count
-
-Each notification includes "View Incident" link
-
-📸 Cloudinary Integration
-
-Stores:
-
-Profile pictures
-
-Aadhaar card
-
-Incident images
-
-🔐 Authentication
-
-JWT stored in HTTP-only cookies
-
-Role-based routing (Admin / Authority / User)
-
-Auto-login using /auth/me
-
-🛠️ Tech Stack
-Frontend
-
-React.js (Vite)
-
-Zustand (Global Store)
-
-React Router
-
-DaisyUI + Tailwind CSS
-
-Axios
-
-React Hot Toast
-
-Backend
-
-Node.js
-
-Express.js
-
-MongoDB + Mongoose
-
-JWT Authentication
-
-Cloudinary Storage
-
-Multer (file upload)
-
-CORS, Cookie-Parser
-
-📂 Folder Structure
-
+```text
 /project-root
 │
 ├── backend
-│   ├── controllers/
-│   ├── routes/
-│   ├── middleware/
-│   ├── models/
-│   ├── config/
-│   ├── uploads/  (Unused in latest version)
-│   └── server.js
+│   ├── config/          # DB, Cloudinary, Redis configurations
+│   ├── controllers/     # Request handlers
+│   ├── middleware/      # Auth & Multer middlewares
+│   ├── models/          # Mongoose Schemas (User, Incident)
+│   ├── queues/          # BullMQ queue definitions
+│   ├── routes/          # Express API routes
+│   ├── utils/           # Helpers (sendNotification, email templates, etc.)
+│   ├── workers/         # BullMQ background workers
+│   └── server.js        # Entry point
 │
 └── frontend
     ├── src/
-    │   ├── components/
-    │   ├── pages/
-    │   ├── stores/
-    │   ├── utils/
-    │   └── App.jsx
+    │   ├── components/  # Reusable UI components
+    │   ├── pages/       # Route-level components
+    │   ├── stores/      # Zustand state stores
+    │   ├── utils/       # Utility functions
+    │   └── App.jsx      # Main application component
     └── vite.config.js
+```
 
-⚙️ Environment Variables
-Backend .env
+## ⚙️ Environment Variables
+
+Create a `.env` file in the `backend/` directory:
+
+```env
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
+
+# Cloudinary Setup
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
-CLIENT_URL=http://localhost:5173
 
-▶️ Installation & Setup
+# Redis Setup (Required for BullMQ)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# Nodemailer Setup (Gmail or other SMTP)
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+
+# Frontend URL for CORS
+CLIENT_URL=http://localhost:5173
+```
+
+## ▶️ Installation & Setup
+
+1️⃣ **Clone Repository**
+```bash
 git clone https://github.com/your-username/incident-reporter.git
 cd incident-reporter
+```
 
-2️⃣ Install backend dependencies
+2️⃣ **Start Redis Server**
+Make sure you have Redis installed and running locally, or use a managed Redis instance.
+```bash
+redis-server
+```
+
+3️⃣ **Backend Setup**
+```bash
 cd backend
 npm install
+npm start
+```
 
-3️⃣ Install frontend dependencies
+4️⃣ **Frontend Setup**
+```bash
 cd ../frontend
 npm install
-
-4️⃣ Run backend
-npm start
-
-5️⃣ Run frontend
 npm run dev
+```
 
-🔐 Default Routes Overview
-POST   /api/auth/signup
-POST   /api/auth/login
-POST   /api/auth/logout
-GET    /api/auth/me
-POST   /api/auth/report-incident
-GET    /api/auth/notifications
-POST   /api/auth/submit-feedback
+## 🔐 API Routes Overview
 
-Admin Routes
-GET    /api/admin/registrations
-POST   /api/admin/verify-user
-POST   /api/admin/assign-incident
-GET    /api/admin/users
+### Authentication & General User Routes
+- `POST /api/auth/signup` - Register a new user
+- `POST /api/auth/login` - Authenticate user & set JWT cookie
+- `POST /api/auth/logout` - Clear JWT cookie
+- `GET /api/auth/me` - Auto-login using HTTP-only cookie
+- `POST /api/auth/report-incident` - Submit a new incident
+- `GET /api/auth/notifications` - Retrieve user notifications
+- `POST /api/auth/submit-feedback` - Submit incident feedback
 
-Authority Routes
-GET    /api/authority/incidents
-POST   /api/authority/update-status
+### Admin Routes
+- `GET /api/admin/registrations` - List pending users
+- `POST /api/admin/verify-user` - Approve/Reject users
+- `GET /api/admin/users` - View all verified users
+- `POST /api/admin/assign-incident` - Assign incident to an Authority
 
-“This is a role-based Incident Reporting and Management System built using the MERN stack.
-The main goal was to design a transparent workflow where incidents can be reported, reviewed, assigned, and resolved with clear accountability.
-
-Users can report incidents and track their progress.
-Admins manage user verification and assign incidents to the appropriate authorities.
-Authorities handle the incident, update its status, and communicate through feedback.
-
-On the backend, I use MongoDB with two core models.
-The User model stores identity details, role, approval status, notifications, and references to reported or assigned incidents.
-The Incident model stores incident-specific data such as images, severity, current status, reporter, assigned authority, and a feedback thread.
-
-Authentication is handled using JWT with HTTP-only cookies, and role-based authorization is enforced through middleware, so each role can only access the actions relevant to them.
-
-For user experience, the frontend updates dynamically without page reloads by re-fetching incident data after every action, keeping the backend as the single source of truth.
-
-I also implemented real-time notifications using Socket.IO.
-If a user is online, they receive notifications instantly.
-If they’re offline, the notification is persisted and sent via email to ensure no updates are missed.”
+### Authority Routes
+- `GET /api/authority/incidents` - List incidents assigned to the authority
+- `POST /api/authority/update-status` - Update an incident's progress status
