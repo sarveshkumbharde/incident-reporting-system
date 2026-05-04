@@ -15,4 +15,12 @@ redis.on("connect", () => {
   console.log(`[Redis] Connecting to ${target}`);
 });
 
-// ... rest of your events
+redis.on("ready", () => {
+  console.log("[Redis] Connection ready");
+});
+
+redis.on("error", (error) => {
+  console.error("[Redis] Connection error:", error.message);
+});
+
+module.exports = redis;
