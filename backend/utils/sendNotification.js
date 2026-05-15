@@ -1,4 +1,5 @@
 const User = require("../models/user.model.js");
+const { transporter } = require("./mailer");
 
 exports.sendNotification = async (
   userId,
@@ -67,8 +68,7 @@ exports.sendNotification = async (
     });
 
     try {
-      const emailQueue = require("../queues/email.queue.js");
-      await emailQueue.add("sendEmail", {
+      await transporter.sendMail({
         to: user.email,
         subject: "New Notification",
         html: `
@@ -79,7 +79,7 @@ exports.sendNotification = async (
           <small>Incident Reporting System</small>
         `,
       });
-      console.log("[Notifications] Email fallback enqueued", {
+      console.log("[Notifications] Email fallback sent directly", {
         userId: user._id.toString(),
         email: user.email,
       });
