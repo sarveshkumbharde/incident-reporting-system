@@ -134,6 +134,7 @@ exports.updateIncidentStatus = async (req, res) => {
         if (global.io) {
             global.io.to(`incident:${incidentId}`).emit("incident_updated", {
                 type: "status",
+                incidentId: incidentId,
                 status: status,
                 updatedBy: req.user._id.toString(),
             });

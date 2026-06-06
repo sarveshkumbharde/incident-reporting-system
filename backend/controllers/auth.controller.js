@@ -657,20 +657,20 @@ exports.viewIncidents = async (req, res) => {
       // Authority can only see incidents assigned to them
       incidents = await incidentModel
         .find({ assignedTo: req.user._id })
-        .select("_id title image status reportedBy")
-        .populate("reportedBy", "firstName lastName");
+        .populate("reportedBy", "firstName lastName")
+        .populate("assignedTo", "firstName lastName");
     } else if (req.user.role === "user") {
       // Users can only see incidents they reported
       incidents = await incidentModel
         .find({ reportedBy: req.user._id })
-        .select("_id title image status reportedBy")
-        .populate("reportedBy", "firstName lastName");
+        .populate("reportedBy", "firstName lastName")
+        .populate("assignedTo", "firstName lastName");
     } else {
       // Admin can see all incidents
       incidents = await incidentModel
         .find({})
-        .select("_id title image status reportedBy")
-        .populate("reportedBy", "firstName lastName");
+        .populate("reportedBy", "firstName lastName")
+        .populate("assignedTo", "firstName lastName");
     }
 
     const response = {

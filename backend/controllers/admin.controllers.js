@@ -213,6 +213,7 @@ exports.assignIncident = async (req, res) => {
     if (global.io) {
       global.io.to(`incident:${incidentId}`).emit("incident_updated", {
         type: "assignment",
+        incidentId: incidentId,
         assignedTo: {
           _id: authority._id,
           firstName: authority.firstName,

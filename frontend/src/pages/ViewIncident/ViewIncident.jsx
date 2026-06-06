@@ -65,16 +65,16 @@ function ViewIncident() {
         } else if (data.type === "feedback") {
           toast.info("New feedback received");
         }
-        
-        // Refresh the local state
-        const refreshData = async () => {
-          const updatedData = await viewIncident(id);
-          if (updatedData) {
-            setIncident(updatedData);
-            setNewStatus(updatedData.status);
-          }
-        };
-        refreshData();
+      }
+      
+      // Update local state directly using payload data
+      if (data.type === "feedback" && data.incident) {
+        setIncident(data.incident);
+      } else if (data.type === "status") {
+        setIncident((prev) => (prev ? { ...prev, status: data.status } : null));
+        setNewStatus(data.status);
+      } else if (data.type === "assignment") {
+        setIncident((prev) => (prev ? { ...prev, assignedTo: data.assignedTo } : null));
       }
     };
     
@@ -84,7 +84,7 @@ function ViewIncident() {
       socket.emit("leave_incident", id);
       socket.off("incident_updated", handleIncidentUpdate);
     };
-  }, [id, authUser?._id, viewIncident]);
+  }, [id, authUser?._id]);
 
   // Scroll feedback to bottom automatically
   useEffect(() => {
@@ -112,7 +112,6 @@ function ViewIncident() {
     if (res?.success) {
       toast.success("Feedback submitted!");
       setFeedbackMessage("");
-      await fetchIncident();
     }
 
     setSubmitting(false);
@@ -125,7 +124,6 @@ function ViewIncident() {
     const success = await updateStatus(id, newStatus);
     if (success) {
       toast.success("Status updated!");
-      await fetchIncident();
     }
   };
 
@@ -146,7 +144,6 @@ function ViewIncident() {
     const success = await assignIncident(id, selectedAuthority);
     if (success) {
       toast.success("Incident assigned!");
-      await fetchIncident();
     }
   };
 

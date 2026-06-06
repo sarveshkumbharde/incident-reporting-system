@@ -38,6 +38,7 @@ export const useAuthStore = create(
 
           await get().fetchNotifications(); // baseline
           get().listenToNotifications(); // realtime
+          get().listenToIncidentUpdates(); // realtime incident updates
         } catch {
           set({ authUser: null, authRole: null });
         }
@@ -63,6 +64,7 @@ export const useAuthStore = create(
             });
             await get().fetchNotifications();
             get().listenToNotifications();
+            get().listenToIncidentUpdates();
             return loggedInUser;
           } else {
             toast.error(res.data.message);
@@ -107,6 +109,50 @@ export const useAuthStore = create(
         set({ hasSocketListener: true });
       },
 
+      listenToIncidentUpdates: () => {
+        socket.off("incident_updated");
+
+        socket.on("incident_updated", (data) => {
+          const currentIncidents = get().incidents || [];
+          const incidentId = data.incident?._id || data.incidentId;
+          
+          if (!incidentId) return;
+
+          const exists = currentIncidents.some((inc) => inc._id === incidentId);
+          if (!exists) return; // not relevant to us
+
+          // Show notifications if update by another user
+          if (data.updatedBy !== get().authUser?._id) {
+            if (data.type === "feedback") {
+              toast.info(`New feedback on incident: "${data.incident?.title || "Incident"}"`);
+            } else if (data.type === "status") {
+              toast.success(`Incident status updated to: "${data.status}"`);
+            } else if (data.type === "assignment") {
+              toast.success(`Incident was assigned to ${data.assignedTo?.firstName} ${data.assignedTo?.lastName}`);
+            }
+          }
+
+          // Map and update list
+          const updatedIncidents = currentIncidents.map((inc) => {
+            if (inc._id !== incidentId) return inc;
+
+            if (data.type === "feedback" && data.incident) {
+              return {
+                ...inc,
+                ...data.incident,
+              };
+            } else if (data.type === "status") {
+              return { ...inc, status: data.status };
+            } else if (data.type === "assignment") {
+              return { ...inc, assignedTo: data.assignedTo };
+            }
+            return inc;
+          });
+
+          set({ incidents: updatedIncidents });
+        });
+      },
+
       register: async (data) => {
         set({ isSigningIn: true });
         try {
@@ -130,6 +176,7 @@ export const useAuthStore = create(
           const res = await axiosInstance.post("/api/auth/logout");
 
           socket.off("notification");
+          socket.off("incident_updated");
           socket.disconnect();
 
           toast.success("Logout successful");
@@ -416,6 +463,12 @@ export const useAuthStore = create(
 
           if (incidents) {
             set({ incidents });
+            // Join socket rooms for all incidents in the list
+            incidents.forEach((inc) => {
+              if (inc._id) {
+                socket.emit("join_incident", inc._id);
+              }
+            });
           } else {
             toast.error(res.data?.message || "Failed to fetch incidents.");
           }
