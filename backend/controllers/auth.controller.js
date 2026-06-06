@@ -742,7 +742,8 @@ exports.submitFeedback = async (req, res) => {
     // ✔️ Fetch updated + populated incident
     incident = await Incident.findById(incidentId)
       .populate("reportedBy", "firstName lastName email")
-      .populate("assignedTo", "firstName lastName email");
+      .populate("assignedTo", "firstName lastName email")
+      .populate("feedback.submittedBy", "firstName lastName role");
 
     if (global.io) {
       global.io.to(`incident:${incidentId}`).emit("incident_updated", {

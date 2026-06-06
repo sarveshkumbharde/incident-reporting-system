@@ -112,6 +112,9 @@ function ViewIncident() {
     if (res?.success) {
       toast.success("Feedback submitted!");
       setFeedbackMessage("");
+      if (res.incident) {
+        setIncident(res.incident);
+      }
     }
 
     setSubmitting(false);

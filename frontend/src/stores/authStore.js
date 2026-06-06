@@ -431,11 +431,10 @@ export const useAuthStore = create(
           });
 
           if (res.data.success) {
-            // Prefer returning the updated feedback array (backend returns it)
-            // If backend returns whole incident instead, return res.data.incident.feedback
             return {
               success: true,
               feedback: res.data.feedback || res.data.incident?.feedback || [],
+              incident: res.data.incident,
             };
           } else {
             return {
