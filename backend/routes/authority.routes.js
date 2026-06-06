@@ -1,7 +1,7 @@
 const protectRoute = require('../middleware/auth.middleware.js');
 const authorityProtect = require('../middleware/authority.middleware.js')
 const express = require('express');
-const {viewIncidents, getUser, sendMessageToReporter, updateIncidentStatus, getAssignedIncidents, getAuthorityDashboard} = require('../controllers/authority.controllers.js')
+const {viewIncidents, getUser, updateIncidentStatus, getAssignedIncidents, getAuthorityDashboard} = require('../controllers/authority.controllers.js')
 const router = express.Router();
 
 // View incidents

@@ -7,7 +7,7 @@ exports.getIncidentById = async (req, res) => {
     const incidentId = req.params.id;
 
     try {
-        const incident = incidentModel.findById(incidentId);
+        const incident = await incidentModel.findById(incidentId);
 
         if(!incident){
             return res.status(404).json({ message: 'Incident not found' });
@@ -192,17 +192,17 @@ exports.getAuthorityDashboard = async (req, res) => {
         const authorityId = req.user._id;
 
         // Get counts for different incident statuses
-        const totalAssigned = await incidentModel.countDocuments();
+        const totalAssigned = await incidentModel.countDocuments({ assignedTo: authorityId });
         const resolvedCount = await incidentModel.countDocuments({ 
-           
+            assignedTo: authorityId,
             status: 'resolved' 
         });
         const inProgressCount = await incidentModel.countDocuments({ 
-          
+            assignedTo: authorityId,
             status: 'under review' 
         });
         const pendingCount = await incidentModel.countDocuments({ 
-         
+            assignedTo: authorityId,
             status: 'reported' 
         });
 
@@ -231,35 +231,3 @@ exports.getAuthorityDashboard = async (req, res) => {
         });
     }
 };
-
-// exports.getFeedback = async (req, res) => {
-//     try {
-//         // Get all incidents with feedback
-//         const incidentsWithFeedback = await incidentModel.find({
-//             feedback: { $exists: true, $ne: null }
-//         }).populate('reportedBy', 'firstName lastName');
-
-//         const feedbackData = incidentsWithFeedback.map(incident => ({
-//             _id: incident._id,
-//             incident: {
-//                 _id: incident._id,
-//                 title: incident.title
-//             },
-//             text: incident.feedback.text,
-//             rating: incident.feedback.rating,
-//             submittedAt: incident.feedback.submittedAt,
-//             reporter: incident.reportedBy
-//         }));
-
-//         return res.json({
-//             success: true,
-//             feedback: feedbackData
-//         });
-//     } catch (error) {
-//         console.error("Error fetching feedback:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error"
-//         });
-//     }
-// };

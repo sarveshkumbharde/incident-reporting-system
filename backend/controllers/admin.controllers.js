@@ -113,7 +113,7 @@ exports.viewRegistrations = async (req, res) => {
 
 exports.removeUser = async (req, res) => {
   try {
-    const userId = req.params.ID;
+    const userId = req.params.id;
 
     const response = await User.findByIdAndDelete(userId);
 

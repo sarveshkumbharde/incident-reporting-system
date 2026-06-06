@@ -105,10 +105,10 @@ exports.adminSignUp = async (req, res) => {
 
 exports.authoritySignUp = async (req, res) => {
   try {
-    const { firstName, lastName, email, mobile, address, password } = req.body;
+    const { firstName, lastName, email, mobile, address, password, aadharCard } = req.body;
 
     // Validate input fields
-    if (!firstName || !lastName || !email || !mobile || !address || !password) {
+    if (!firstName || !lastName || !email || !mobile || !address || !password || !aadharCard) {
       return res.status(400).json({
         message: "All fields are required, including Aadhar Card.",
         success: false,
@@ -161,8 +161,8 @@ exports.authoritySignUp = async (req, res) => {
         role: newAuthority.role,
         assignedIncidents: newAuthority.assignedIncidents,
         reportedIncidents: newAuthority.reportedIncidents,
-        aadharCard: newAuthority.aadharUrl,
-        profilePic: newAuthority.profileUrl,
+        aadharCard: newAuthority.aadharCard,
+        profilePic: newAuthority.profilePic,
         notifications: newAuthority.notifications,
       },
     });
