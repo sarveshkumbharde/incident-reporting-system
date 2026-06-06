@@ -21,12 +21,22 @@ const { Server } = require("socket.io");
 
 const server = http.createServer(app);
 
+const { createAdapter } = require("@socket.io/redis-adapter");
+const pubClient = require("./config/redis.js");
+const subClient = pubClient.duplicate();
+
+subClient.on("error", (error) => {
+  console.error("[Redis SubClient] Connection error:", error.message);
+});
+
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL,
     credentials: true
   }
 });
+
+io.adapter(createAdapter(pubClient, subClient));
 
 global.io = io;
 

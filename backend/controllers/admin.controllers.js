@@ -213,6 +213,19 @@ exports.assignIncident = async (req, res) => {
     // ❗ Cache invalidation
     await invalidateIncidentCaches(incidentId);
 
+    // Emit real-time update to the room
+    if (global.io) {
+      global.io.to(`incident:${incidentId}`).emit("incident_updated", {
+        type: "assignment",
+        assignedTo: {
+          _id: authority._id,
+          firstName: authority.firstName,
+          lastName: authority.lastName
+        },
+        updatedBy: req.user._id.toString()
+      });
+    }
+
     // ✅ Notify authority
     await enqueueNotification({
       name: "incident-assigned-authority",

@@ -48,14 +48,22 @@ exports.sendNotification = async (
     });
 
     const room = userId.toString();
-    const activeRoom = io?.sockets?.adapter?.rooms?.get(room);
+    
+    let activeSockets = [];
+    if (io) {
+      try {
+        activeSockets = await io.in(room).fetchSockets();
+      } catch (err) {
+        console.error("[Notifications] Error checking active sockets for room:", room, err);
+      }
+    }
 
-    if (activeRoom?.size > 0) {
+    if (activeSockets && activeSockets.length > 0) {
       io.to(room).emit("notification", savedNotification);
       console.log("[Notifications] Realtime notification emitted", {
         userId: user._id.toString(),
         room,
-        sockets: activeRoom.size,
+        sockets: activeSockets.length,
         notificationId: savedNotification?._id?.toString() || null,
       });
       return savedNotification;

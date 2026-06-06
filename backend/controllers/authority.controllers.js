@@ -132,6 +132,15 @@ exports.updateIncidentStatus = async (req, res) => {
         await incident.save();
         await invalidateIncidentCaches(incidentId);
 
+        // Emit real-time status update to the room
+        if (global.io) {
+            global.io.to(`incident:${incidentId}`).emit("incident_updated", {
+                type: "status",
+                status: status,
+                updatedBy: req.user._id.toString(),
+            });
+        }
+
         // Add notification to reporter
         await enqueueNotification({
             name: "incident-status-updated",

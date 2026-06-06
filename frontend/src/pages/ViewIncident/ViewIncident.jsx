@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import toast from "react-hot-toast";
+import socket from "../../socket";
 
 function ViewIncident() {
   const { id } = useParams();
@@ -44,6 +45,46 @@ function ViewIncident() {
   useEffect(() => {
     fetchIncident();
   }, [id]);
+
+  // Join/leave the incident room & listen to real-time updates
+  useEffect(() => {
+    if (!id) return;
+    
+    if (!socket.connected) {
+      socket.connect();
+    }
+    
+    socket.emit("join_incident", id);
+    
+    const handleIncidentUpdate = (data) => {
+      if (data.updatedBy !== authUser?._id) {
+        if (data.type === "status") {
+          toast.success(`Incident status was updated to: ${data.status}`);
+        } else if (data.type === "assignment") {
+          toast.success(`Incident was assigned to ${data.assignedTo?.firstName} ${data.assignedTo?.lastName}`);
+        } else if (data.type === "feedback") {
+          toast.info("New feedback received");
+        }
+        
+        // Refresh the local state
+        const refreshData = async () => {
+          const updatedData = await viewIncident(id);
+          if (updatedData) {
+            setIncident(updatedData);
+            setNewStatus(updatedData.status);
+          }
+        };
+        refreshData();
+      }
+    };
+    
+    socket.on("incident_updated", handleIncidentUpdate);
+    
+    return () => {
+      socket.emit("leave_incident", id);
+      socket.off("incident_updated", handleIncidentUpdate);
+    };
+  }, [id, authUser?._id, viewIncident]);
 
   // Scroll feedback to bottom automatically
   useEffect(() => {

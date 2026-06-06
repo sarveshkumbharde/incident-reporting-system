@@ -756,6 +756,14 @@ exports.submitFeedback = async (req, res) => {
       .populate("reportedBy", "firstName lastName email")
       .populate("assignedTo", "firstName lastName email");
 
+    if (global.io) {
+      global.io.to(`incident:${incidentId}`).emit("incident_updated", {
+        type: "feedback",
+        incident,
+        updatedBy: userId.toString(),
+      });
+    }
+
     const recipientIds = new Set();
 
     if (incident.reportedBy?._id) {

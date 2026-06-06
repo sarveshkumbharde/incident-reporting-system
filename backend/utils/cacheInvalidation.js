@@ -5,11 +5,11 @@ const invalidateIncidentCaches = async (incidentId) => {
     // ❌ Delete single incident cache
     await redis.del(`incident_${incidentId}`);
 
-    // ❌ Delete ALL role-based incident lists
-    const keys = await redis.keys("incidents_*");
+    // Delete ALL role-based incident lists
+    const keys = await redis.smembers("active_incident_list_keys");
 
     if (keys.length > 0) {
-      await redis.del(keys);
+      await redis.del([...keys, "active_incident_list_keys"]);
     }
   } catch (err) {
     console.error("Cache invalidation error:", err);
