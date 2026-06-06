@@ -63,4 +63,7 @@ const incidentSchema = new mongoose.Schema({
     timestamps: true 
 });
 
+incidentSchema.index({ reportedBy: 1 });
+incidentSchema.index({ assignedTo: 1 });
+
 module.exports = mongoose.model('Incident', incidentSchema);
