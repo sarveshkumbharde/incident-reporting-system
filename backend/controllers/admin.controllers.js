@@ -2,7 +2,6 @@ const User = require("../models/user.model.js");
 const Incident = require("../models/incident.model.js");
 const bcrypt = require("bcryptjs");
 const { enqueueNotification } = require("../queues/notification.queue");
-const { invalidateIncidentCaches } = require("../utils/cacheInvalidation");
 
 exports.verify = async (req, res) => {
   try {
@@ -209,9 +208,6 @@ exports.assignIncident = async (req, res) => {
 
     incident.assignedTo = authorityId;
     await incident.save();
-
-    // ❗ Cache invalidation
-    await invalidateIncidentCaches(incidentId);
 
     // Emit real-time update to the room
     if (global.io) {

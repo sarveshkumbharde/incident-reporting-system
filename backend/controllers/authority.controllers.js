@@ -2,7 +2,6 @@ const incidentModel = require('../models/incident.model')
 const User = require('../models/user.model')
 const mongoose = require('mongoose');
 const { enqueueNotification } = require("../queues/notification.queue");
-const { invalidateIncidentCaches } = require("../utils/cacheInvalidation");
 
 exports.getIncidentById = async (req, res) => {
     const incidentId = req.params.id;
@@ -130,7 +129,6 @@ exports.updateIncidentStatus = async (req, res) => {
         // Update status
         incident.status = status;
         await incident.save();
-        await invalidateIncidentCaches(incidentId);
 
         // Emit real-time status update to the room
         if (global.io) {

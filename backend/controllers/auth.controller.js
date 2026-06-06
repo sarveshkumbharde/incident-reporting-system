@@ -6,8 +6,6 @@ require("dotenv").config();
 const incidentModel = require("../models/incident.model.js");
 const userModel = require("../models/user.model.js");
 const { uploadOnCloudinary } = require("../config/cloudinary.js");
-const { getCache, setCache } = require("../utils/cache");
-const { invalidateIncidentCaches } = require("../utils/cacheInvalidation");
 const { enqueueNotification } = require("../queues/notification.queue");
 
 exports.getProfile = async (req, res) => {
@@ -610,9 +608,6 @@ exports.reportIncident = async (req, res) => {
     //   );
     // }
 
-    // ❗ Cache invalidation
-    await invalidateIncidentCaches(incident._id);
-
     // ✅ Notify user
     await enqueueNotification({
       name: "incident-created-reporter",
@@ -656,10 +651,6 @@ exports.viewIncidents = async (req, res) => {
     console.log("🔍 viewIncidents called by user:", req.user?._id);
     console.log("🔍 User role:", req.user?.role);
     let incidents;
-    const cacheKey = `incidents_${req.user.role}_${req.user._id}`;
-
-    const cached = await getCache(cacheKey);
-    if (cached) return res.json(cached);
 
     // Filter incidents based on user role
     if (req.user.role === "authority") {
@@ -687,8 +678,6 @@ exports.viewIncidents = async (req, res) => {
       data: incidents,
       success: true,
     };
-
-    await setCache(cacheKey, response, 60);
 
     console.log(`📊 Found ${incidents.length} incidents for ${req.user.role}`);
     console.log("📦 Sending response...");
@@ -749,7 +738,6 @@ exports.submitFeedback = async (req, res) => {
     });
 
     await incident.save();
-    await invalidateIncidentCaches(incidentId);
 
     // ✔️ Fetch updated + populated incident
     incident = await Incident.findById(incidentId)
@@ -852,10 +840,6 @@ exports.viewIncident = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const cacheKey = `incident_${id}`;
-    const cached = await getCache(cacheKey);
-    if (cached) return res.json(cached);
-
     // Add await and populate related fields
     const incident = await incidentModel
       .findById(id)
@@ -876,8 +860,6 @@ exports.viewIncident = async (req, res) => {
       incident: incident,
       message: "Incident fetched successfully",
     };
-
-    await setCache(cacheKey, response, 60);
 
     return res.status(200).json(response);
   } catch (error) {
