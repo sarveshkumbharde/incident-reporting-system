@@ -52,18 +52,6 @@ const userSchema = new mongoose.Schema(
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
-    reportedIncidents: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Incident",
-      },
-    ],
-    assignedIncidents: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Incident",
-      },
-    ],
     notifications: [
       {
         text: {

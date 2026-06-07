@@ -12,8 +12,6 @@ exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
       .select("-password")
-      .populate("reportedIncidents") // 🔥 FULL incident objects
-      .populate("assignedIncidents")
       .populate({
         path: "notifications.incidentId",
         select: "title status",
@@ -137,8 +135,6 @@ exports.authoritySignUp = async (req, res) => {
       password: hashedPassword,
       aadharCard,
       role: "authority",
-      assignedIncidents: [],
-      reportedIncidents: [],
       notifications: [],
     });
 
@@ -159,8 +155,6 @@ exports.authoritySignUp = async (req, res) => {
         lastName: newAuthority.lastName,
         email: newAuthority.email,
         role: newAuthority.role,
-        assignedIncidents: newAuthority.assignedIncidents,
-        reportedIncidents: newAuthority.reportedIncidents,
         aadharCard: newAuthority.aadharCard,
         profilePic: newAuthority.profilePic,
         notifications: newAuthority.notifications,

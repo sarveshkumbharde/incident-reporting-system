@@ -121,16 +121,7 @@ export const useAuthStore = create(
           const exists = currentIncidents.some((inc) => inc._id === incidentId);
           if (!exists) return; // not relevant to us
 
-          // Show notifications if update by another user
-          if (data.updatedBy !== get().authUser?._id) {
-            if (data.type === "feedback") {
-              toast.info(`New feedback on incident: "${data.incident?.title || "Incident"}"`);
-            } else if (data.type === "status") {
-              toast.success(`Incident status updated to: "${data.status}"`);
-            } else if (data.type === "assignment") {
-              toast.success(`Incident was assigned to ${data.assignedTo?.firstName} ${data.assignedTo?.lastName}`);
-            }
-          }
+
 
           // Map and update list
           const updatedIncidents = currentIncidents.map((inc) => {

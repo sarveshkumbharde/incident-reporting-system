@@ -8,7 +8,20 @@ import Signup from "./pages/Signup/Signup";
 import Incidents from "./pages/Incidents/Incidents";
 import Profile from "./pages/Profile/Profile";
 // import { ToastContainer } from "react-toastify";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
+
+// Add a custom .info method to react-hot-toast if not present
+toast.info = (message, options) => {
+  return toast(message, {
+    ...options,
+    icon: "ℹ️",
+    style: {
+      borderLeft: "5px solid #3b82f6",
+      background: "#eff6ff",
+      color: "#1e3a8a",
+    },
+  });
+};
 import { useAuthStore } from "./stores/authStore";
 import CheckApproval from "./pages/CheckApproval/CheckApproval";
 import IncidentForm from "./pages/IncidentForm/IncidentForm";
@@ -41,7 +54,50 @@ function App() {
 
   return (
     <>
-      <Toaster />
+      <Toaster
+        limit={1}
+        position="top-right"
+        reverseOrder={false}
+        gutter={8}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "rgba(255, 255, 255, 0.95)",
+            color: "#1e293b",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(226, 232, 240, 0.8)",
+            padding: "16px 20px",
+            borderRadius: "16px",
+            fontSize: "14px",
+            fontWeight: "500",
+            fontFamily: '"Outfit", "Inter", sans-serif',
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            maxWidth: "400px",
+          },
+          success: {
+            iconTheme: {
+              primary: "#10b981",
+              secondary: "#ffffff",
+            },
+            style: {
+              borderLeft: "5px solid #10b981",
+              background: "#f0fdf4",
+              color: "#14532d",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#ffffff",
+            },
+            style: {
+              borderLeft: "5px solid #ef4444",
+              background: "#fef2f2",
+              color: "#7f1d1d",
+            },
+          },
+        }}
+      />
       <Navbar />
       <Routes>
         {/* Catch-all route for 404 */}

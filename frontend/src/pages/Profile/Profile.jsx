@@ -26,7 +26,7 @@ const Profile = () => {
 
       try {
         setLoading(true);
-        // Fetch complete user data with populated incidents
+        // Fetch complete user data
         const response = await fetch(`${API_URL}/auth/profile`, {
           credentials: "include",
         });
@@ -36,10 +36,17 @@ const Profile = () => {
         if (data.success) {
           setUserData(data.user);
           console.log("Fetched user:", data.user);
-          // If reported incidents are populated, set them
-          if (data.user.reportedIncidents) {
-            setReportedIncidents(data.user.reportedIncidents);
-          }
+        }
+
+        // Fetch user reported incidents separately
+        const incidentsResponse = await fetch(`${API_URL}/auth/user-incidents`, {
+          credentials: "include",
+        });
+
+        const incidentsData = await incidentsResponse.json();
+
+        if (incidentsData.success) {
+          setReportedIncidents(incidentsData.incidents || []);
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);

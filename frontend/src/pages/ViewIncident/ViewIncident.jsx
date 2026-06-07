@@ -49,24 +49,20 @@ function ViewIncident() {
   // Join/leave the incident room & listen to real-time updates
   useEffect(() => {
     if (!id) return;
-    
+
     if (!socket.connected) {
       socket.connect();
     }
-    
+
     socket.emit("join_incident", id);
-    
+
     const handleIncidentUpdate = (data) => {
       if (data.updatedBy !== authUser?._id) {
-        if (data.type === "status") {
-          toast.success(`Incident status was updated to: ${data.status}`);
-        } else if (data.type === "assignment") {
-          toast.success(`Incident was assigned to ${data.assignedTo?.firstName} ${data.assignedTo?.lastName}`);
-        } else if (data.type === "feedback") {
+        if (data.type === "feedback") {
           toast.info("New feedback received");
         }
       }
-      
+
       // Update local state directly using payload data
       if (data.type === "feedback" && data.incident) {
         setIncident(data.incident);
@@ -77,9 +73,9 @@ function ViewIncident() {
         setIncident((prev) => (prev ? { ...prev, assignedTo: data.assignedTo } : null));
       }
     };
-    
+
     socket.on("incident_updated", handleIncidentUpdate);
-    
+
     return () => {
       socket.emit("leave_incident", id);
       socket.off("incident_updated", handleIncidentUpdate);
@@ -124,10 +120,7 @@ function ViewIncident() {
   // STATUS UPDATE (Admin + Authority)
   // -----------------------------
   const handleStatusUpdate = async () => {
-    const success = await updateStatus(id, newStatus);
-    if (success) {
-      toast.success("Status updated!");
-    }
+    await updateStatus(id, newStatus);
   };
 
   // -----------------------------
@@ -144,10 +137,7 @@ function ViewIncident() {
       return;
     }
 
-    const success = await assignIncident(id, selectedAuthority);
-    if (success) {
-      toast.success("Incident assigned!");
-    }
+    await assignIncident(id, selectedAuthority);
   };
 
   // ------------ UI RENDERING -------------
@@ -273,7 +263,7 @@ function ViewIncident() {
               <option value="reported">Reported</option>
               <option value="under review">Under Review</option>
               <option value="in progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
+              <option value="resolved">Resolved</option>
               <option value="dismissed">Dismissed</option>
             </select>
 
